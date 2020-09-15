@@ -1,0 +1,19 @@
+region	fold_increase
+Andalucía	2.3
+Aragón	0.0
+Principado de Asturias	1.8
+Islas Baleares	1.6
+Islas Canarias	3.1
+Cantabria	1.6
+Castilla-La Mancha	4.0
+Castilla y León	3.3
+Cataluña	0.2
+Ceuta y Melilla	4.0
+Comunidad Valenciana	1.0
+Extremadura	1.6
+Galicia	2.4
+Comunidad de Madrid	1.4
+Región de Murcia	3.3
+Comunidad Foral de Navarra	0.3
+País Vasco	1.3
+La Rioja	3.7
