@@ -97,11 +97,12 @@ stdevcfr_t<-c()
 cvdevcfr_t<-c()
 
 library("EnvStats")
+#std <- function(x) sd(x)/sqrt(length(x))
 
 for(i in 1:start_time) {
     props_t <- tail(fitdT7, -i)/head(fitT7, -i)
     fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
-    stdevcfr_t[i] <- sd(tail(props_t, n=time_window))
+    stdevcfr_t[i] <- mad(tail(props_t, n=time_window))
     win_pos<-tail(tail(fitdT7, -i), time_window)
     win_deat<-tail(head(fitT7, -i), time_window)
 	cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$p.value
@@ -112,7 +113,6 @@ for(i in 1:start_time) {
 
 delay_time<-which.min(cvdevcfr_t)
 forecast_time<-delay_time
-cvdevcfr_t
 min(cvdevcfr_t)
 
 
@@ -124,8 +124,8 @@ dev.off()
 paste0("Estimated delay is: ", delay_time)
 
 props<-tail(fitdT7, -delay_time)/head(fitT7, -delay_time)*100
-fc<-mean(tail(props, n=time_window), trim = 0.10)/100
-stdevcfr<-sd(tail(props, n=time_window))/100
+fc<-fc_t[delay_time]
+stdevcfr<-stdevcfr_t[delay_time]
 
 forecast<-sum(dateshiftdiff$deaths)
 for_min <- forecast
@@ -137,8 +137,10 @@ maxstd<-fc+stdevcfr
 if (minstd < 0) {
 	minstd<-0
 }
+
 for(i in 1:forecast_time) {
 	forecast = forecast + fitT7[length(props)+i]*fc
+	#print(forecast)
 	for_min = for_min + fitT7[length(props)+i]*(minstd)
 	for_max = for_max + fitT7[length(props)+i]*(maxstd)
 }
@@ -152,7 +154,7 @@ fname<-paste("trend_", country, "_", format(Sys.time(), "%d-%m-%y"),  ".png", se
 png(fname, width=1200,  height=600)
 par(mar=c(10, 8, 4, 10) + 0.1)
 
-subt1<-paste(country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths. The delay is", delay_time, "days", "CFR is:", round(fc_t[delay_time]*100, 2), "%", sep=" ")
+subt1<-paste(country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths. The delay is", delay_time, "days", "CFR is:", round(fc_t[delay_time]*100, 2), "+/-", round(stdevcfr*100, 2), "%", sep=" ")
 subt2<-paste("Forecast in", forecast_time, "days", format(for_min, big.mark=","), "/", format(for_max, big.mark=","), sep=" ")
 #subt2<-""
 plot(zoo((dateshiftdiff$tot), dateshiftdiff$date), xaxt='n', yaxt='n', main = paste(c(subt1, subt2), sep=""), ylim=c(0,ylim_cases), type = c("p"), cex=0.5, lty=0, pch=16, ylab="", xlab="", col ="blue") 
