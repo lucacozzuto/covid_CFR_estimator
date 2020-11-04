@@ -1,4 +1,4 @@
-# R --slave --args "US" 21 14 1000 < plot_trend.R
+#R --slave --args "US" 120 90 20000 < plot_trend2.0.R 
 
 args<-commandArgs(TRUE)
 
@@ -107,10 +107,7 @@ for(i in 1:start_time) {
 	cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$p.value
 }
 
-
-paste("ooo", "ocazzz")
-
-
+#tail(tail(fitdT7, -delay_time), time_window)/tail(head(fitT7, -delay_time), time_window)
 
 
 delay_time<-which.min(cvdevcfr_t)
@@ -134,8 +131,8 @@ forecast<-sum(dateshiftdiff$deaths)
 for_min <- forecast
 for_max <- for_min
 
-minstd<-fc-2*stdevcfr
-maxstd<-fc+2*stdevcfr
+minstd<-fc-stdevcfr
+maxstd<-fc+stdevcfr
 
 if (minstd < 0) {
 	minstd<-0
