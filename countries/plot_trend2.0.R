@@ -1,34 +1,58 @@
-#R --slave --args "US" 120 90 20000 "ECDC" "" < plot_trend2.0.R 
+#R --slave --args "US" 120 90 20000 "ECDC" "" "" < plot_trend2.0.R 
 
 args<-commandArgs(TRUE)
 
-#country <- "Italy"
-#start_time <- 120
-#time_window <- 90
-#pad <- 10000
-#source_data <- "JH"
-#force_del <- ""
+country <- "Campania"
+start_time <- 120
+time_window <- 90
+force_ylim <- ""
+source_data <- "PC"
+force_del <- ""
+go_back <- 7
 
 
 country <- args[1]
 start_time <- as.numeric(args[2])
 time_window <- as.numeric(args[3])
-pad <- as.numeric(args[4])
+force_ylim <- args[4]
 source_data <- args[5]
 force_del <- args[6]
+go_back <- args[7]
 
 # get the data from John Hopkins
 death_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
 cases_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
 ecdc_web <- "https://opendata.ecdc.europa.eu/covid19/casedistribution/csv"
+ita_web<-"https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv"
+
 
 if (country == "UK") {
 	country <- "United Kingdom"
 }
 
+getDataFromITA <- function(link, country) {
+	data_raw<-read.csv(link)
+	data_country<-data_raw[grep(country, data_raw$denominazione_regione), ]
+	sel_data<-data_country[, c("data", "nuovi_positivi", "deceduti")]
+	sel_data$data<-as.Date(sel_data$data)
+	row.names(sel_data)<-sel_data$data
+	sel_death<-as.data.frame(diff(sel_data$deceduti)	)
+	row.names(sel_death)<-tail(row.names(sel_data), -1)
+	colnames(sel_death)<-c("deaths")
+	merge_data<-merge(tail(sel_data, -1), sel_death, by="row.names")
+	merge_data$Row.names<-NULL
+	merge_data$deceduti<-NULL
+	row.names(merge_data)<-merge_data$data
+	names(merge_data)<-c("date","tot","deaths")
+	return (merge_data)
+}
+
 getDataFromECDC <- function(link, country) {
+	if (country == "US") {
+		country <- "United_States_of_America"
+	}
 	data_raw<-read.csv(link,  na.strings = "", fileEncoding = "UTF-8-BOM")
-	data_country<-data_raw[grep("Italy", data_raw$countriesAndTerritories), ]
+	data_country<-data_raw[grep(country, data_raw$countriesAndTerritories), ]
 	sel_data<-data_country[, c("dateRep", "cases", "deaths")]
 	row.names(sel_data)<-data_country$dateRep
 	sel_data$dateRep<-as.Date(sel_data$dateRep, format="%d/%m/%Y")
@@ -98,17 +122,28 @@ if (source_data == "JH") {
 
 } else if(source_data == "ECDC") {
   	dateshiftdiff<-getDataFromECDC (ecdc_web, country) 
-
+} else if(source_data == "PC") {
+	dateshiftdiff<-getDataFromITA (ita_web, country)
 } else {
-	stop("Not supported. Please choose ECDC or JH")	
+	stop("Not supported. Please choose ECDC, JH or PC (for Italian regions)")	
 }
+
+if (go_back != "") {
+	dateshiftdiff<-head(dateshiftdiff, -as.numeric(go_back))
+}
+
+last_day<-tail(dateshiftdiff$date, 1)
 
 fitdT7 <- getFit(dateshiftdiff$deaths, time_mavg)
 fitT7 <- getFit(dateshiftdiff$tot, time_mavg)
 
 
 #change this
-ylim_cases <- max(dateshiftdiff$tot)+pad
+ylim_cases <- max(dateshiftdiff$tot)
+
+if (force_ylim != "") {
+	ylim_cases <- as.numeric(force_ylim)
+}
 ylim_deaths <- ylim_cases/10
 
 time_mavg<-7
@@ -147,7 +182,7 @@ min(cvdevcfr_t)
 
 
 library("spatialEco")
-fname2<-paste("VAR_", country, "_", source_data, "_", format(Sys.time(), "%d-%m-%y"),   ".png", sep="")
+fname2<-paste("VAR_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"),   ".png", sep="")
 png(fname2)
 locmin<-local.min.max(log(cvdevcfr_t))
 dev.off()
@@ -184,7 +219,7 @@ for_max = round(for_max)
 diff_for<-round(forecast)-sum(dateshiftdiff$deaths)
 library("berryFunctions")
 library("zoo")
-fname<-paste("trend_", country, "_", source_data, "_", format(Sys.time(), "%d-%m-%y"),  ".png", sep="")
+fname<-paste("trend_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"),  ".png", sep="")
 png(fname, width=1200,  height=600)
 par(mar=c(10, 8, 4, 10) + 0.1)
 
@@ -224,7 +259,7 @@ mtext("Proportion",side=2,col="black",line=2)
 dev.off()
 
 cfr<-(tail(fitdT7, -delay_time)/head(fitT7, -delay_time))
-fname<-paste("CFR_", country, "_", source_data, "_", format(Sys.time(), "%d-%m-%y"), ".png", sep="")
+fname<-paste("CFR_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"), ".png", sep="")
 
 cfr_perc<-cfr*100
 
