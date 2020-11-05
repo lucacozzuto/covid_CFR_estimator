@@ -1,25 +1,42 @@
-#R --slave --args "US" 120 90 20000 < plot_trend2.0.R 
+#R --slave --args "US" 120 90 20000 "ECDC" "" < plot_trend2.0.R 
 
 args<-commandArgs(TRUE)
 
 #country <- "Italy"
-#start_time <- 30
-#time_window <- 21
-#pad <- 1000
+#start_time <- 120
+#time_window <- 90
+#pad <- 10000
+#source_data <- "JH"
+#force_del <- ""
 
 
 country <- args[1]
 start_time <- as.numeric(args[2])
 time_window <- as.numeric(args[3])
 pad <- as.numeric(args[4])
+source_data <- args[5]
+force_del <- args[6]
 
 # get the data from John Hopkins
 death_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
 cases_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
+ecdc_web <- "https://opendata.ecdc.europa.eu/covid19/casedistribution/csv"
 
 if (country == "UK") {
 	country <- "United Kingdom"
 }
+
+getDataFromECDC <- function(link, country) {
+	data_raw<-read.csv(link,  na.strings = "", fileEncoding = "UTF-8-BOM")
+	data_country<-data_raw[grep("Italy", data_raw$countriesAndTerritories), ]
+	sel_data<-data_country[, c("dateRep", "cases", "deaths")]
+	row.names(sel_data)<-data_country$dateRep
+	sel_data$dateRep<-as.Date(sel_data$dateRep, format="%d/%m/%Y")
+	names(sel_data) <- c("date", "tot", "deaths") 
+	ord_data <- sel_data[order(sel_data$date),]
+	return (ord_data)
+}
+
 
 getDataFromWeb <- function(link) {
 	data_raw<-read.csv(link)
@@ -37,16 +54,10 @@ getDataFromWeb <- function(link) {
 	return(data_raw.agg.df)
 }
 
-death_data<-getDataFromWeb(death_web)
-cases_data<-getDataFromWeb(cases_web)
-
 getSingleCountryData <- function(data_all, country ) {
 	single_data<-colSums(data_all[grep(country, row.names(data_all)), ])
 	return (single_data)
 }
-
-deaths_one_country<-getSingleCountryData(death_data, country)
-cases_one_country<-getSingleCountryData(cases_data, country)
 
 creatingPerDayDiff <- function (data_one_country) {
 	shift2tot<-t(data.frame(data_one_country))
@@ -63,32 +74,47 @@ creatingPerDayDiff <- function (data_one_country) {
 	return(shiftdifft)
 }
 
-deaths_diff<-creatingPerDayDiff(deaths_one_country)
-cases_diff<-creatingPerDayDiff(cases_one_country)
-
-
-ylim_cases <- max(cases_diff)+pad
-ylim_deaths <- ylim_cases/10
-
-
-time_mavg<-7
-
 getFit <- function(data_to_fit, time_mavg) {
 	require(pracma)
-	fitted_data <- movavg(as.numeric(data_to_fit["data_one_country", ]), time_mavg, type=c("s"))
+	fitted_data <- movavg(as.numeric(data_to_fit), time_mavg, type=c("s"))
 	return(fitted_data)
 }
 
-fitdT7 <- getFit(deaths_diff, time_mavg)
-fitT7 <- getFit(cases_diff, time_mavg)
+if (source_data == "JH") {
+	death_data<-getDataFromWeb(death_web)
+	cases_data<-getDataFromWeb(cases_web)
 
-library(stringr)
-dateshiftdiff<-as.data.frame(t(cases_diff))
-names(dateshiftdiff)<-c("tot")
-dateshiftdiff$deaths<-as.vector(t(deaths_diff))
-dateshiftdiff$date<-as.Date(str_replace_all(str_replace(row.names(dateshiftdiff), "X", ""), '\\.', "-"), format="%m-%d-%y")
+	deaths_one_country<-getSingleCountryData(death_data, country)
+	cases_one_country<-getSingleCountryData(cases_data, country)
+	
+	deaths_diff<-creatingPerDayDiff(deaths_one_country)
+	cases_diff<-creatingPerDayDiff(cases_one_country)
 
-### check better delay
+	library(stringr)
+	dateshiftdiff<-as.data.frame(t(cases_diff))
+	names(dateshiftdiff)<-c("tot")
+	dateshiftdiff$deaths<-as.vector(t(deaths_diff))
+	dateshiftdiff$date<-as.Date(str_replace_all(str_replace(row.names(dateshiftdiff), "X", ""), '\\.', "-"), format="%m-%d-%y")
+
+} else if(source_data == "ECDC") {
+  	dateshiftdiff<-getDataFromECDC (ecdc_web, country) 
+
+} else {
+	stop("Not supported. Please choose ECDC or JH")	
+}
+
+fitdT7 <- getFit(dateshiftdiff$deaths, time_mavg)
+fitT7 <- getFit(dateshiftdiff$tot, time_mavg)
+
+
+#change this
+ylim_cases <- max(dateshiftdiff$tot)+pad
+ylim_deaths <- ylim_cases/10
+
+time_mavg<-7
+
+
+### predict delay
 #start_time<-21
 #time_window<-14
 props_t<-c()
@@ -110,19 +136,27 @@ for(i in 1:start_time) {
 
 #tail(tail(fitdT7, -delay_time), time_window)/tail(head(fitT7, -delay_time), time_window)
 
-
 delay_time<-which.min(cvdevcfr_t)
+
+if (force_del != "") {
+	delay_time = as.numeric(force_del)
+}
+
 forecast_time<-delay_time
 min(cvdevcfr_t)
 
 
-fname2<-paste("VAR_", country, "_", format(Sys.time(), "%d-%m-%y"),  ".png", sep="")
+library("spatialEco")
+fname2<-paste("VAR_", country, "_", source_data, "_", format(Sys.time(), "%d-%m-%y"),   ".png", sep="")
 png(fname2)
-plot(log(cvdevcfr_t))
+locmin<-local.min.max(log(cvdevcfr_t))
 dev.off()
 
 paste0("Estimated delay is: ", delay_time)
 
+minim_idx<-match(locmin$minima, log(cvdevcfr_t))
+
+minim_idx
 props<-tail(fitdT7, -delay_time)/head(fitT7, -delay_time)*100
 fc<-fc_t[delay_time]
 stdevcfr<-stdevcfr_t[delay_time]
@@ -150,7 +184,7 @@ for_max = round(for_max)
 diff_for<-round(forecast)-sum(dateshiftdiff$deaths)
 library("berryFunctions")
 library("zoo")
-fname<-paste("trend_", country, "_", format(Sys.time(), "%d-%m-%y"),  ".png", sep="")
+fname<-paste("trend_", country, "_", source_data, "_", format(Sys.time(), "%d-%m-%y"),  ".png", sep="")
 png(fname, width=1200,  height=600)
 par(mar=c(10, 8, 4, 10) + 0.1)
 
@@ -190,7 +224,7 @@ mtext("Proportion",side=2,col="black",line=2)
 dev.off()
 
 cfr<-(tail(fitdT7, -delay_time)/head(fitT7, -delay_time))
-fname<-paste("CFR_", country, "_", format(Sys.time(), "%d-%m-%y"),  ".png", sep="")
+fname<-paste("CFR_", country, "_", source_data, "_", format(Sys.time(), "%d-%m-%y"), ".png", sep="")
 
 cfr_perc<-cfr*100
 
