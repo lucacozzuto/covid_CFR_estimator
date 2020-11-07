@@ -26,13 +26,23 @@ ecdc_web <- "https://opendata.ecdc.europa.eu/covid19/casedistribution/csv"
 ita_web<-"https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv"
 
 
-if (country == "UK") {
-	country <- "United Kingdom"
+getDataCountry<-function(id, data_all) {
+	data_country<-c()
+	if (id %in% data_all$country) {	
+		data_country<-data_all[grep(id, data_all$country), ]
+	} else {
+	    list_country<-paste(unique(data_all$country), collapse="\n")
+	    mess<-paste0("The country ", id, " is not in the DB\n", "Here the list of countries available for this DB:\n", list_country)
+		stop(mess)
+	}
+	return (data_country)
 }
 
 getDataFromITA <- function(link, country) {
 	data_raw<-read.csv(link)
-	data_country<-data_raw[grep(country, data_raw$denominazione_regione), ]
+	data_raw$"country"<-data_raw$denominazione_regione
+	data_country<-getDataCountry(country, data_raw)
+	#data_country<-data_raw[grep(country, data_raw$denominazione_regione), ]
 	sel_data<-data_country[, c("data", "nuovi_positivi", "deceduti")]
 	sel_data$data<-as.Date(sel_data$data)
 	row.names(sel_data)<-sel_data$data
@@ -50,9 +60,14 @@ getDataFromITA <- function(link, country) {
 getDataFromECDC <- function(link, country) {
 	if (country == "US") {
 		country <- "United_States_of_America"
+	} else if (country == "UK") {
+		country <- "United_Kingdom"
 	}
+	
 	data_raw<-read.csv(link,  na.strings = "", fileEncoding = "UTF-8-BOM")
-	data_country<-data_raw[grep(country, data_raw$countriesAndTerritories), ]
+	data_raw$country<-data_raw$countriesAndTerritories
+	data_country<-getDataCountry(country, data_raw)
+	#data_country<-data_raw[grep(country, data_raw$countriesAndTerritories), ]
 	sel_data<-data_country[, c("dateRep", "cases", "deaths")]
 	row.names(sel_data)<-data_country$dateRep
 	sel_data$dateRep<-as.Date(sel_data$dateRep, format="%d/%m/%Y")
@@ -79,7 +94,17 @@ getDataFromWeb <- function(link) {
 }
 
 getSingleCountryData <- function(data_all, country ) {
-	single_data<-colSums(data_all[grep(country, row.names(data_all)), ])
+	if (country == "UK") {
+		country <- "United Kingdom"
+	}
+	single_data<-c()
+	if (country %in% row.names(data_all)) {	
+		single_data<-colSums(data_all[grep(country, row.names(data_all)), ])
+	} else {
+	    list_country<-paste(unique(row.names(data_all)), collapse="\n")
+	    mess<-paste0("The country ", country, " is not in the DB\n", "Here the list of countries available for this DB:\n", list_country)
+		stop(mess)
+	}
 	return (single_data)
 }
 
@@ -202,6 +227,7 @@ for_max <- for_min
 
 minstd<-fc-stdevcfr
 maxstd<-fc+stdevcfr
+
 
 if (minstd < 0) {
 	minstd<-0
