@@ -192,6 +192,7 @@ for(i in 1:start_time) {
     win_pos<-tail(tail(fitdT7, -i), time_window)
     win_deat<-tail(head(fitT7, -i), time_window)
 	cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$p.value
+	#cvdevcfr_t[i]<-mean(tail(props_t, n=time_window))
 }
 
 #tail(tail(fitdT7, -delay_time), time_window)/tail(head(fitT7, -delay_time), time_window)
@@ -225,8 +226,8 @@ forecast<-sum(dateshiftdiff$deaths)
 for_min <- forecast
 for_max <- for_min
 
-minstd<-fc-stdevcfr
-maxstd<-fc+stdevcfr
+minstd<-fc-(2*stdevcfr)
+maxstd<-fc+(2*stdevcfr)
 
 
 if (minstd < 0) {
@@ -243,6 +244,7 @@ for_min = round(for_min)
 for_max = round(for_max)
 
 diff_for<-round(forecast)-sum(dateshiftdiff$deaths)
+forecast<-round(forecast, 0)
 library("berryFunctions")
 library("zoo")
 fname<-paste("trend_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"),  ".png", sep="")
@@ -250,7 +252,7 @@ png(fname, width=1200,  height=600)
 par(mar=c(10, 8, 4, 10) + 0.1)
 
 subt1<-paste(country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths. The delay is", delay_time, "days", "CFR is:", round(fc_t[delay_time]*100, 2), "+/-", round(stdevcfr*100, 2), "%", sep=" ")
-subt2<-paste("Forecast in", forecast_time, "days", format(for_min, big.mark=","), "/", format(for_max, big.mark=","), sep=" ")
+subt2<-paste("Forecast in",forecast_time, "days", format(forecast, big.mark=","), "(", format(for_min, big.mark=","), "/", format(for_max, big.mark=","),")", sep=" ")
 #subt2<-""
 plot(zoo((dateshiftdiff$tot), dateshiftdiff$date), xaxt='n', yaxt='n', main = paste(c(subt1, subt2), sep=""), ylim=c(0,ylim_cases), type = c("p"), cex=0.5, lty=0, pch=16, ylab="", xlab="", col ="blue") 
 timeAxis(1, midmonth=TRUE, format="%b")
