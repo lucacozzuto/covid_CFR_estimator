@@ -1,5 +1,16 @@
+#plot_trend
+
 For executing the script you can use this command line
 R --slave --args "US" 120 90 20000 "ECDC" "" "" < plot_trend2.0.R 
+
+#Libraries needed 
+
+library(dplyr)
+library(stringr)
+library("EnvStats")
+library("spatialEco")
+library("berryFunctions")
+library("zoo")
 
 Parameters:
 1. Country (string).
@@ -9,3 +20,5 @@ Parameters:
 5. Data source. Currenlty we support ECDC, Jhon Hopkins (JH) and Italian Protezione Civile (PC) for Italian regions.
 6. Force delay. (empty or number) You force using a fixed value for delay. Useful when multple minima are reported. 
 7. Go back in time (empty or number). You move the last day back in time.
+
+#Adding a docker image.
