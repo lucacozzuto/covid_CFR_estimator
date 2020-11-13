@@ -6,10 +6,15 @@ R --slave --args "US" 120 90 "" "ECDC" "" "" < plot_trend2.0.R
 #Libraries needed 
 
 library(dplyr)
+
 library(stringr)
+
 library("EnvStats")
+
 library("spatialEco")
+
 library("berryFunctions")
+
 library("zoo")
 
 Parameters:
