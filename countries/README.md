@@ -6,9 +6,9 @@ R --slave --args "US" 45 60 "" "ECDC" "" "" < plot_trend2.0.R
 
 #Libraries needed 
 
-library(dplyr)
+library("dplyr")
 
-library(stringr)
+library("stringr")
 
 library("EnvStats")
 
