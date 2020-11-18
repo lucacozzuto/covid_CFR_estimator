@@ -1,15 +1,21 @@
 #plot_trend
 
 For executing the script you can use this command line
-R --slave --args "US" 120 90 20000 "ECDC" "" "" < plot_trend2.0.R 
+
+R --slave --args "US" 45 60 "" "ECDC" "" "" < plot_trend2.0.R 
 
 #Libraries needed 
 
-library(dplyr)
-library(stringr)
+library("dplyr")
+
+library("stringr")
+
 library("EnvStats")
+
 library("spatialEco")
+
 library("berryFunctions")
+
 library("zoo")
 
 Parameters:
