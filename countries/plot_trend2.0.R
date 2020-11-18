@@ -2,14 +2,14 @@
 
 args<-commandArgs(TRUE)
 
-country <- "Campania"
-start_time <- 120
-time_window <- 90
-force_ylim <- ""
-source_data <- "PC"
-force_del <- ""
-go_back <- 7
+library(dplyr)
+library(stringr)
+library("EnvStats")
+library("spatialEco")
+library("berryFunctions")
+library("zoo")
 
+time_mavg<-7
 
 country <- args[1]
 start_time <- as.numeric(args[2])
@@ -83,7 +83,6 @@ getDataFromWeb <- function(link) {
 	data_raw$Province.State<-NULL
 	data_raw$Lat<-NULL
 	data_raw$Long<-NULL
-	library(dplyr)
 	data_raw.agg<-data_raw %>%
 		group_by(Country.Region) %>% 
 		summarize_all(sum, na.rm = TRUE)
@@ -139,7 +138,6 @@ if (source_data == "JH") {
 	deaths_diff<-creatingPerDayDiff(deaths_one_country)
 	cases_diff<-creatingPerDayDiff(cases_one_country)
 
-	library(stringr)
 	dateshiftdiff<-as.data.frame(t(cases_diff))
 	names(dateshiftdiff)<-c("tot")
 	dateshiftdiff$deaths<-as.vector(t(deaths_diff))
@@ -171,7 +169,6 @@ if (force_ylim != "") {
 }
 ylim_deaths <- ylim_cases/10
 
-time_mavg<-7
 
 
 ### predict delay
@@ -182,7 +179,6 @@ fc_t<-c()
 stdevcfr_t<-c()
 cvdevcfr_t<-c()
 
-library("EnvStats")
 #std <- function(x) sd(x)/sqrt(length(x))
 
 for(i in 1:start_time) {
@@ -207,15 +203,15 @@ forecast_time<-delay_time
 min(cvdevcfr_t)
 
 
-library("spatialEco")
 fname2<-paste("VAR_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"),   ".png", sep="")
 png(fname2)
 locmin<-local.min.max(log(cvdevcfr_t))
+minim_idx<-match(locmin$minima, log(cvdevcfr_t))
+title(main = paste0("Estimated delay is: ", delay_time), sub=paste0("Minima: ", paste(minim_idx, collapse=",")))
+
 dev.off()
 
 paste0("Estimated delay is: ", delay_time)
-
-minim_idx<-match(locmin$minima, log(cvdevcfr_t))
 
 minim_idx
 props<-tail(fitdT7, -delay_time)/head(fitT7, -delay_time)*100
@@ -245,13 +241,11 @@ for_max = round(for_max)
 
 diff_for<-round(forecast)-sum(dateshiftdiff$deaths)
 forecast<-round(forecast, 0)
-library("berryFunctions")
-library("zoo")
 fname<-paste("trend_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"),  ".png", sep="")
 png(fname, width=1200,  height=600)
 par(mar=c(10, 8, 4, 10) + 0.1)
 
-subt1<-paste(country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths. The delay is", delay_time, "days", "CFR is:", round(fc_t[delay_time]*100, 2), "+/-", round(stdevcfr*100, 2), "%", sep=" ")
+subt1<-paste(country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths.", source_data, format(last_day, "%d-%m-%y"), "The delay is", delay_time, "days", "CFR is:", round(fc_t[delay_time]*100, 2), "+/-", round(stdevcfr*100, 2), "%", sep=" ")
 subt2<-paste("Forecast in",forecast_time, "days", format(forecast, big.mark=","), "(", format(for_min, big.mark=","), "/", format(for_max, big.mark=","),")", sep=" ")
 #subt2<-""
 plot(zoo((dateshiftdiff$tot), dateshiftdiff$date), xaxt='n', yaxt='n', main = paste(c(subt1, subt2), sep=""), ylim=c(0,ylim_cases), type = c("p"), cex=0.5, lty=0, pch=16, ylab="", xlab="", col ="blue") 
@@ -298,13 +292,4 @@ abline(h=1, col="gray")
 abline(h=2, col="gray")
 dev.off()
 
-#library("vioplot")
-#png(fname2)
-#vioplot(tail(cfr_perc, 60))
-#sdev.off()
-
-#avecfr<-round(mean(tail(cfr, 60))*100, 2)
-#medcfr<-round(median(tail(cfr, 60))*100, 2)
-#stdevcfr<-round(sd(tail(cfr, 60))*100, 2)
 paste("Average CFR is: ", fc_t[delay_time]*100, "% +/- ", stdevcfr_t[delay_time]*100, "%")
-#paste("Median CFR is: ", medcfr)
