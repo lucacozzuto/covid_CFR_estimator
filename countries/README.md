@@ -27,4 +27,14 @@ Parameters:
 6. Force delay. (empty or number) You force using a fixed value for delay. Useful when multple minima are reported. 
 7. Go back in time (empty or number). You move the last day back in time.
 
-#Adding a docker image.
+# Containerization
+
+* Adding example Shiny Server
+	* https://github.com/rstudio/shiny-examples/
+	* Modularize examples: https://shiny.rstudio.com/articles/modules.html
+* Include Shinyproxy with it
+	* https://www.r-bloggers.com/2019/02/deploying-an-r-shiny-app-with-docker/
+	* https://towardsdatascience.com/an-open-source-solution-to-deploy-enterprise-level-r-shiny-applications-2e19d950ff35
+		* https://github.com/xmc811/ShinyProxy-template
+* Allow deployment
+	* https://business-science.github.io/shiny-production-with-aws-book/shiny-server-on-aws-with-docker.html
