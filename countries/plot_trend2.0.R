@@ -1,4 +1,4 @@
-#R --slave --args "US" 120 90 20000 "ECDC" "" "" < plot_trend2.0.R 
+#R --slave --args "US" 120 90 20000 "ECDC" "" "" "" < plot_trend2.0.R 
 
 args<-commandArgs(TRUE)
 
@@ -18,6 +18,7 @@ force_ylim <- args[4]
 source_data <- args[5]
 force_del <- args[6]
 go_back <- args[7]
+for_time <- args[8]
 
 # get the data from John Hopkins
 death_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
@@ -199,7 +200,12 @@ if (force_del != "") {
 	delay_time = as.numeric(force_del)
 }
 
-forecast_time<-delay_time
+if (for_time == "") {
+   forecast_time<-delay_time
+} else if (as.numeric(for_time) > delay_time) {
+	forecast_time<-delay_time
+} else { forecast_time<-as.numeric(for_time) }
+
 min(cvdevcfr_t)
 
 
