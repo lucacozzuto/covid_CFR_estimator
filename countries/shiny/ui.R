@@ -28,18 +28,13 @@ ui <- fluidPage(
 
     sliderInput("for_time", h3("Time for forecast"),
                        min = 1, max = 30, value = 7),
-                         
-    textInput("text", h3("Text input"), 
-            			value = "Enter text...")
     ),
 
     mainPanel(
       tabsetPanel(
-        tabPanel("Plot",
-                 fluidRow(
-                   plotOutput('plot')
-                 )),
-        tabPanel("Summary",  tableOutput("view"))
+        tabPanel("Trend", plotOutput("plot")),
+        tabPanel("Var", plotOutput("plot2")),
+        tabPanel("CFR", plotOutput("plot3"))
       )
 
     	#plotOutput('plot')

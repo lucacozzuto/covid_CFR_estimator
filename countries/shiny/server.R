@@ -8,6 +8,7 @@ library("spatialEco")
 library("berryFunctions")
 library("zoo")
 library(reshape)
+library(gridExtra)
 
 # get the data from John Hopkins
 death_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
@@ -93,15 +94,67 @@ remove_outliers <- function(x, na.rm = TRUE, ...) {
   y
 }
 
-plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data, go_back=0, for_time=0, force_ylim=0, force_del=0) {
-	#start_time <- 45
-	#time_window <- 90
-	#force_ylim <- args[4]
-	#source_data <- "JH"
-	#force_del <- args[6]
-	#go_back <- args[7]
-	#for_time <- args[8]
+plotVAR<-function(dateshiftdiff, country, start_time, time_window, source_data, go_back=0, for_time=0, force_ylim=0, force_del=0) {
+	if (as.numeric(go_back > 0)) {
+		dateshiftdiff<-head(dateshiftdiff, -as.numeric(go_back))
+	}
+	last_day<-tail(dateshiftdiff$date, 1)
 
+	time_mavg<-7
+	# make moving average
+	fitdT7 <- getFit(dateshiftdiff$deaths, time_mavg)
+	fitT7 <- getFit(dateshiftdiff$cases, time_mavg)
+
+	# max Y
+	ylim_cases <- max(dateshiftdiff$cases)
+
+	if (force_ylim > 0) {
+		ylim_cases <- as.numeric(force_ylim)
+	}
+	ylim_deaths <- ylim_cases/10
+
+	### predict delay
+	props_t<-c()
+	fc_t<-c()
+	stdevcfr_t<-c()
+	cvdevcfr_t<-c()
+
+	for(i in 1:start_time) {
+	    props_t <- tail(fitdT7, -i)/head(fitT7, -i)
+    	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
+		no_out<-remove_outliers(tail(props_t, n=time_window))
+		stdevcfr_t[i] <- sd(no_out, na.rm =TRUE)
+    	win_pos<-tail(tail(fitdT7, -i), time_window)
+    	win_deat<-tail(head(fitT7, -i), time_window)
+		cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$p.value
+	}
+
+	delay_time<-which.min(cvdevcfr_t)
+
+	if (force_del > 0) {
+		delay_time = as.numeric(force_del)
+	}
+
+	forecast_time<-delay_time
+	
+	if (as.numeric(for_time) == 0) {
+   		forecast_time<-delay_time
+	} else if (as.numeric(for_time) > delay_time) {
+		forecast_time<-delay_time
+	} else { forecast_time<-as.numeric(for_time) }
+
+
+	#fname2<-paste("VAR_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"),   ".png", sep="")
+	#png(fname2)
+	plotmin<-locmin<-local.min.max(log(cvdevcfr_t))
+	minim_idx<-match(locmin$minima, log(cvdevcfr_t))
+	title(main = paste0("Estimated delay is: ", delay_time), sub=paste0("Minima: ", paste(minim_idx, collapse=",")))	
+
+}
+
+
+
+plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data, go_back=0, for_time=0, force_ylim=0, force_del=0) {
 	if (as.numeric(go_back > 0)) {
 		dateshiftdiff<-head(dateshiftdiff, -as.numeric(go_back))
 	}
@@ -153,14 +206,11 @@ plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data
 		forecast_time<-delay_time
 	} else { forecast_time<-as.numeric(for_time) }
 
-#min(cvdevcfr_t)
 
 	#fname2<-paste("VAR_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"),   ".png", sep="")
 	#png(fname2)
-	#locmin<-local.min.max(log(cvdevcfr_t))
-	#minim_idx<-match(locmin$minima, log(cvdevcfr_t))
-	#title(main = paste0("Estimated delay is: ", delay_time), sub=paste0("Minima: ", paste(minim_idx, collapse=",")))	
-	#dev.off()
+#title(main = paste0("Estimated delay is: ", delay_time), sub=paste0("Minima: ", paste(minim_idx, collapse=",")))	
+#dev.off()
 
 #paste0("Estimated delay is: ", delay_time)
 
@@ -251,6 +301,100 @@ plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data
 
 }
 
+plotCFR<-function(dateshiftdiff, country, start_time, time_window, source_data, go_back=0, for_time=0, force_ylim=0, force_del=0) {
+	if (as.numeric(go_back > 0)) {
+		dateshiftdiff<-head(dateshiftdiff, -as.numeric(go_back))
+	}
+	last_day<-tail(dateshiftdiff$date, 1)
+
+	time_mavg<-7
+	# make moving average
+	fitdT7 <- getFit(dateshiftdiff$deaths, time_mavg)
+	fitT7 <- getFit(dateshiftdiff$cases, time_mavg)
+
+	# max Y
+	ylim_cases <- max(dateshiftdiff$cases)
+
+	if (force_ylim > 0) {
+		ylim_cases <- as.numeric(force_ylim)
+	}
+	ylim_deaths <- ylim_cases/10
+
+	### predict delay
+	props_t<-c()
+	fc_t<-c()
+	stdevcfr_t<-c()
+	cvdevcfr_t<-c()
+
+	for(i in 1:start_time) {
+	    props_t <- tail(fitdT7, -i)/head(fitT7, -i)
+    	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
+    #median absolute deviation or stdev without outliers?
+    #stdevcfr_t[i] <- mad(tail(props_t, n=time_window))
+		no_out<-remove_outliers(tail(props_t, n=time_window))
+		stdevcfr_t[i] <- sd(no_out, na.rm =TRUE)
+    	win_pos<-tail(tail(fitdT7, -i), time_window)
+    	win_deat<-tail(head(fitT7, -i), time_window)
+		cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$p.value
+	}
+
+	delay_time<-which.min(cvdevcfr_t)
+
+	if (force_del > 0) {
+		delay_time = as.numeric(force_del)
+	}
+
+	forecast_time<-delay_time
+	
+	if (as.numeric(for_time) == 0) {
+   		forecast_time<-delay_time
+	} else if (as.numeric(for_time) > delay_time) {
+		forecast_time<-delay_time
+	} else { forecast_time<-as.numeric(for_time) }
+
+	props<-tail(fitdT7, -delay_time)/head(fitT7, -delay_time)*100
+	fc<-fc_t[delay_time]
+	stdevcfr<-stdevcfr_t[delay_time]
+
+	forecast<-sum(dateshiftdiff$deaths)
+
+	for_min <- forecast
+	for_max <- for_min
+	minstd<-fc-(2*stdevcfr)
+	maxstd<-fc+(2*stdevcfr)
+
+	if (minstd < 0) {
+		minstd<-0
+	}
+	
+	for(i in 1:forecast_time) {
+		forecast = forecast + fitT7[length(props)+i]*fc
+		for_min = for_min + fitT7[length(props)+i]*(minstd)
+		for_max = for_max + fitT7[length(props)+i]*(maxstd)
+	}
+	for_min = round(for_min)
+	for_max = round(for_max)
+
+	diff_for<-round(forecast)-sum(dateshiftdiff$deaths)
+	forecast<-round(forecast, 0)
+
+
+	cfr<-(tail(fitdT7, -delay_time)/head(fitT7, -delay_time))
+	fname<-paste("CFR_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"), ".png", sep="")
+
+	cfr_perc<-cfr*100
+
+	plot(zoo(cfr_perc, tail(dateshiftdiff$date, -delay_time)), xaxt='n',yaxs="i" , type = c("l"), ylim=c(0,10), xlab="Months", ylab="CFR (in %).", col ="red") 
+	timeAxis(1, midmonth=TRUE, format="%b")
+	abline(h=1, col="gray")
+	abline(h=2, col="gray")
+
+}
+
+
+
+
+
 
 
 deat_jh<-getDataFromJH(death_web)
@@ -280,12 +424,21 @@ server <- function(input, output) {
     	selectInput("country", h3("Choose country"), countries, selected="Italy") 
 	})
 
-
 	output$plot <- renderPlot({
 		single_country_data<-getSingleCountryData(datasetInput(), input$country, input$source_data)
 		plotTrend(single_country_data, input$country, input$start_time , input$time_window, input$source_data,  input$go_back, input$for_time, input$force_ylim, input$force_del )
     }, 	height=600, width=1200)
-    		
+
+	output$plot2 <- renderPlot({
+		single_country_data<-getSingleCountryData(datasetInput(), input$country, input$source_data)
+ 		plotVAR(single_country_data, input$country, input$start_time , input$time_window, input$source_data,  input$go_back, input$for_time, input$force_ylim, input$force_del )
+    }, height=600, width=600)
+
+	output$plot3 <- renderPlot({
+		single_country_data<-getSingleCountryData(datasetInput(), input$country, input$source_data)
+ 		plotCFR(single_country_data, input$country, input$start_time , input$time_window, input$source_data,  input$go_back, input$for_time, input$force_ylim, input$force_del )
+    }, height=600, width=600)
+       		
   output$view <- renderTable({
     tail(getSingleCountryData(datasetInput(), input$country, input$source_data), n = 10)
   })
