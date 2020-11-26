@@ -26,10 +26,12 @@ ui <- fluidPage(
     sliderInput("go_back", h3("Go back in time"),
                        min = 0, max = 120, value = 0),
 
-    sliderInput("for_time", h3("Time for forecast"),
+    uiOutput("ui_cfr"),
+
+    sliderInput("for_time", h3("Days for forecast"),
                        min = 1, max = 30, value = 7),
     ),
-
+    
     mainPanel(
       tabsetPanel(
         tabPanel("Trend", plotOutput("plot")),

@@ -94,7 +94,7 @@ remove_outliers <- function(x, na.rm = TRUE, ...) {
   y
 }
 
-plotVAR<-function(dateshiftdiff, country, start_time, time_window, source_data, go_back=0, for_time=0, force_ylim=0, force_del=0) {
+plotVAR<-function(dateshiftdiff, country, start_time, time_window, source_data, go_back=0, for_time=0, force_ylim=0, force_del=0, cfr_time=30) {
 	if (as.numeric(go_back > 0)) {
 		dateshiftdiff<-head(dateshiftdiff, -as.numeric(go_back))
 	}
@@ -121,8 +121,12 @@ plotVAR<-function(dateshiftdiff, country, start_time, time_window, source_data, 
 
 	for(i in 1:start_time) {
 	    props_t <- tail(fitdT7, -i)/head(fitT7, -i)
-    	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
-		no_out<-remove_outliers(tail(props_t, n=time_window))
+    #	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
+    #median absolute deviation or stdev without outliers?
+    #stdevcfr_t[i] <- mad(tail(props_t, n=time_window))
+		# remove outliers and calc average and stdev
+		no_out<-remove_outliers(tail(props_t, n=cfr_time))
+    	fc_t[i] <- mean(no_out, na.rm =TRUE)
 		stdevcfr_t[i] <- sd(no_out, na.rm =TRUE)
     	win_pos<-tail(tail(fitdT7, -i), time_window)
     	win_deat<-tail(head(fitT7, -i), time_window)
@@ -154,7 +158,7 @@ plotVAR<-function(dateshiftdiff, country, start_time, time_window, source_data, 
 
 
 
-plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data, go_back=0, for_time=0, force_ylim=0, force_del=0) {
+plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data, go_back=0, for_time=0, force_ylim=0, force_del=0, cfr_time=30) {
 	if (as.numeric(go_back > 0)) {
 		dateshiftdiff<-head(dateshiftdiff, -as.numeric(go_back))
 	}
@@ -180,12 +184,15 @@ plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data
 	stdevcfr_t<-c()
 	cvdevcfr_t<-c()
 
+
 	for(i in 1:start_time) {
 	    props_t <- tail(fitdT7, -i)/head(fitT7, -i)
-    	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
+    #	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
     #median absolute deviation or stdev without outliers?
     #stdevcfr_t[i] <- mad(tail(props_t, n=time_window))
-		no_out<-remove_outliers(tail(props_t, n=time_window))
+		# remove outliers and calc average and stdev
+		no_out<-remove_outliers(tail(props_t, n=cfr_time))
+    	fc_t[i] <- mean(no_out, na.rm =TRUE)
 		stdevcfr_t[i] <- sd(no_out, na.rm =TRUE)
     	win_pos<-tail(tail(fitdT7, -i), time_window)
     	win_deat<-tail(head(fitT7, -i), time_window)
@@ -206,21 +213,11 @@ plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data
 		forecast_time<-delay_time
 	} else { forecast_time<-as.numeric(for_time) }
 
-
-	#fname2<-paste("VAR_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"),   ".png", sep="")
-	#png(fname2)
-#title(main = paste0("Estimated delay is: ", delay_time), sub=paste0("Minima: ", paste(minim_idx, collapse=",")))	
-#dev.off()
-
-#paste0("Estimated delay is: ", delay_time)
-
-#minim_idx
 	props<-tail(fitdT7, -delay_time)/head(fitT7, -delay_time)*100
 	fc<-fc_t[delay_time]
 	stdevcfr<-stdevcfr_t[delay_time]
 
 	forecast<-sum(dateshiftdiff$deaths)
-	#stdevcfr_t
 
 	for_min <- forecast
 	for_max <- for_min
@@ -241,9 +238,6 @@ plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data
 
 	diff_for<-round(forecast)-sum(dateshiftdiff$deaths)
 	forecast<-round(forecast, 0)
-	#fname<-paste("trend_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"),  ".png", sep="")
-	#png(fname, width=1200,  height=600)
-	#dev.new(width = 40, height = 20)
 	par(mar=c(10, 8, 4, 10) + 0.1)
 
 	perday<-format(round((forecast-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
@@ -282,26 +276,9 @@ plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data
 	abline(h=-2, col="black", lty=2)
 	mtext("Proportion",side=2,col="black",line=2) 
 
-#dev.off()
-
-	#cfr<-(tail(fitdT7, -delay_time)/head(fitT7, -delay_time))
-	#fname<-paste("CFR_", country, "_", source_data, "_", format(last_day, "%d-%m-%y"), ".png", sep="")
-
-	#cfr_perc<-cfr*100
-
-#png(fname)
-#plot(zoo(cfr_perc, tail(dateshiftdiff$date, -delay_time)), xaxt='n',yaxs="i" , type = c("l"), ylim=c(0,10), xlab="Months", ylab="CFR (in %).", col ="red") 
-#timeAxis(1, midmonth=TRUE, format="%b")
-#abline(h=1, col="gray")
-#abline(h=2, col="gray")
-#dev.off()
-
-#paste("Average CFR is: ", fc_t[delay_time]*100, "% +/- ", stdevcfr_t[delay_time]*100, "%")
-
-
 }
 
-plotCFR<-function(dateshiftdiff, country, start_time, time_window, source_data, go_back=0, for_time=0, force_ylim=0, force_del=0) {
+plotCFR<-function(dateshiftdiff, country, start_time, time_window, source_data, go_back=0, for_time=0, force_ylim=0, force_del=0, cfr_time=30) {
 	if (as.numeric(go_back > 0)) {
 		dateshiftdiff<-head(dateshiftdiff, -as.numeric(go_back))
 	}
@@ -328,16 +305,18 @@ plotCFR<-function(dateshiftdiff, country, start_time, time_window, source_data, 
 
 	for(i in 1:start_time) {
 	    props_t <- tail(fitdT7, -i)/head(fitT7, -i)
-    	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
+    #	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
     #median absolute deviation or stdev without outliers?
     #stdevcfr_t[i] <- mad(tail(props_t, n=time_window))
-		no_out<-remove_outliers(tail(props_t, n=time_window))
+		# remove outliers and calc average and stdev
+		no_out<-remove_outliers(tail(props_t, n=cfr_time))
+    	fc_t[i] <- mean(no_out, na.rm =TRUE)
 		stdevcfr_t[i] <- sd(no_out, na.rm =TRUE)
     	win_pos<-tail(tail(fitdT7, -i), time_window)
     	win_deat<-tail(head(fitT7, -i), time_window)
 		cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$p.value
 	}
-
+	
 	delay_time<-which.min(cvdevcfr_t)
 
 	if (force_del > 0) {
@@ -424,19 +403,24 @@ server <- function(input, output) {
     	selectInput("country", h3("Choose country"), countries, selected="Italy") 
 	})
 
+   output$ui_cfr <- renderUI({
+    sliderInput("cfr_time", h3("Days for CFR estimation"),
+                       min = 2, max = input$time_window, value = 30)
+	})
+
 	output$plot <- renderPlot({
 		single_country_data<-getSingleCountryData(datasetInput(), input$country, input$source_data)
-		plotTrend(single_country_data, input$country, input$start_time , input$time_window, input$source_data,  input$go_back, input$for_time, input$force_ylim, input$force_del )
+		plotTrend(single_country_data, input$country, input$start_time , input$time_window, input$source_data,  input$go_back, input$for_time, input$force_ylim, input$force_del , input$cfr_time)
     }, 	height=600, width=1200)
 
 	output$plot2 <- renderPlot({
 		single_country_data<-getSingleCountryData(datasetInput(), input$country, input$source_data)
- 		plotVAR(single_country_data, input$country, input$start_time , input$time_window, input$source_data,  input$go_back, input$for_time, input$force_ylim, input$force_del )
+ 		plotVAR(single_country_data, input$country, input$start_time , input$time_window, input$source_data,  input$go_back, input$for_time, input$force_ylim, input$force_del , input$cfr_time)
     }, height=600, width=600)
 
 	output$plot3 <- renderPlot({
 		single_country_data<-getSingleCountryData(datasetInput(), input$country, input$source_data)
- 		plotCFR(single_country_data, input$country, input$start_time , input$time_window, input$source_data,  input$go_back, input$for_time, input$force_ylim, input$force_del )
+ 		plotCFR(single_country_data, input$country, input$start_time , input$time_window, input$source_data,  input$go_back, input$for_time, input$force_ylim, input$force_del , input$cfr_time)
     }, height=600, width=600)
        		
   output$view <- renderTable({
