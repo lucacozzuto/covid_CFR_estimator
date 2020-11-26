@@ -1,4 +1,4 @@
-#R --slave --args "US" 120 90 20000 "ECDC" "" "" "" < plot_trend2.0.R 
+#R --slave --args "US" 120 90 20000 "ECDC" "" "" "" 30 < plot_trend2.0.R 
 
 args<-commandArgs(TRUE)
 
@@ -19,6 +19,7 @@ source_data <- args[5]
 force_del <- args[6]
 go_back <- args[7]
 for_time <- args[8]
+cfr_time <- args[9]
 
 # get the data from John Hopkins
 death_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
@@ -182,15 +183,29 @@ cvdevcfr_t<-c()
 
 #std <- function(x) sd(x)/sqrt(length(x))
 
-for(i in 1:start_time) {
-    props_t <- tail(fitdT7, -i)/head(fitT7, -i)
-    fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
-    stdevcfr_t[i] <- mad(tail(props_t, n=time_window))
-    win_pos<-tail(tail(fitdT7, -i), time_window)
-    win_deat<-tail(head(fitT7, -i), time_window)
-	cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$p.value
-	#cvdevcfr_t[i]<-mean(tail(props_t, n=time_window))
+remove_outliers <- function(x, na.rm = TRUE, ...) {
+  qnt <- quantile(x, probs=c(.25, .75), na.rm = na.rm, ...)
+  H <- 1.5 * IQR(x, na.rm = na.rm)
+  y <- x
+  y[x < (qnt[1] - H)] <- NA
+  y[x > (qnt[2] + H)] <- NA
+  y
 }
+
+
+	for(i in 1:start_time) {
+	    props_t <- tail(fitdT7, -i)/head(fitT7, -i)
+    #	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
+    #median absolute deviation or stdev without outliers?
+    #stdevcfr_t[i] <- mad(tail(props_t, n=time_window))
+		# remove outliers and calc average and stdev
+		no_out<-remove_outliers(tail(props_t, n=cfr_time))
+    	fc_t[i] <- mean(no_out, na.rm =TRUE)
+		stdevcfr_t[i] <- sd(no_out, na.rm =TRUE)
+    	win_pos<-tail(tail(fitdT7, -i), time_window)
+    	win_deat<-tail(head(fitT7, -i), time_window)
+		cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$p.value
+	}
 
 #tail(tail(fitdT7, -delay_time), time_window)/tail(head(fitT7, -delay_time), time_window)
 
@@ -225,6 +240,8 @@ fc<-fc_t[delay_time]
 stdevcfr<-stdevcfr_t[delay_time]
 
 forecast<-sum(dateshiftdiff$deaths)
+stdevcfr_t
+
 for_min <- forecast
 for_max <- for_min
 
@@ -238,7 +255,6 @@ if (minstd < 0) {
 
 for(i in 1:forecast_time) {
 	forecast = forecast + fitT7[length(props)+i]*fc
-	#print(forecast)
 	for_min = for_min + fitT7[length(props)+i]*(minstd)
 	for_max = for_max + fitT7[length(props)+i]*(maxstd)
 }
@@ -251,8 +267,12 @@ fname<-paste("trend_", country, "_", source_data, "_", format(last_day, "%d-%m-%
 png(fname, width=1200,  height=600)
 par(mar=c(10, 8, 4, 10) + 0.1)
 
+perday<-format(round((forecast-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
+perdaymin<-format(round((for_min-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
+perdaymax<-format(round((for_max-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
+
 subt1<-paste(country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths.", source_data, format(last_day, "%d-%m-%y"), "The delay is", delay_time, "days", "CFR is:", round(fc_t[delay_time]*100, 2), "+/-", round(stdevcfr*100, 2), "%", sep=" ")
-subt2<-paste("Forecast in",forecast_time, "days", format(forecast, big.mark=","), "(", format(for_min, big.mark=","), "/", format(for_max, big.mark=","),")", sep=" ")
+subt2<-paste("Forecast in",forecast_time, "days", format(forecast, big.mark=","), "(", format(for_min, big.mark=","), "/", format(for_max, big.mark=","),").", "Per day:", perday, "(", perdaymin, "/", perdaymax, ")", sep=" ")
 #subt2<-""
 plot(zoo((dateshiftdiff$tot), dateshiftdiff$date), xaxt='n', yaxt='n', main = paste(c(subt1, subt2), sep=""), ylim=c(0,ylim_cases), type = c("p"), cex=0.5, lty=0, pch=16, ylab="", xlab="", col ="blue") 
 timeAxis(1, midmonth=TRUE, format="%b")
