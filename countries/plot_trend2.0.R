@@ -1,4 +1,4 @@
-#R --slave --args "US" 120 90 20000 "ECDC" "" "" "" 30 < plot_trend2.0.R 
+#R --slave --args "US" 45 90 60000 "JH" "" "" "" 30 < plot_trend2.0.R 
 
 args<-commandArgs(TRUE)
 
