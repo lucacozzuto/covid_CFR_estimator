@@ -245,8 +245,8 @@ stdevcfr_t
 for_min <- forecast
 for_max <- for_min
 
-minstd<-fc-(2*stdevcfr)
-maxstd<-fc+(2*stdevcfr)
+minstd<-fc-(3*stdevcfr)
+maxstd<-fc+(3*stdevcfr)
 
 
 if (minstd < 0) {
@@ -271,7 +271,7 @@ perday<-format(round((forecast-sum(dateshiftdiff$deaths))/forecast_time, 0), big
 perdaymin<-format(round((for_min-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
 perdaymax<-format(round((for_max-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
 
-subt1<-paste(country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths.", source_data, format(last_day, "%d-%m-%y"), "The delay is", delay_time, "days", "CFR is:", round(fc_t[delay_time]*100, 2), "+/-", round(stdevcfr*100, 2), "%", sep=" ")
+subt1<-paste(country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths.", source_data, format(last_day, "%d-%m-%y"), "The delay is", delay_time, "days", "CFR is:", round(fc_t[delay_time]*100, 2), "+/-", round(3*stdevcfr*100, 2), "%", sep=" ")
 subt2<-paste("Forecast in",forecast_time, "days", format(forecast, big.mark=","), "(", format(for_min, big.mark=","), "/", format(for_max, big.mark=","),").", "Per day:", perday, "(", perdaymin, "/", perdaymax, ")", sep=" ")
 #subt2<-""
 plot(zoo((dateshiftdiff$tot), dateshiftdiff$date), xaxt='n', yaxt='n', main = paste(c(subt1, subt2), sep=""), ylim=c(0,ylim_cases), type = c("p"), cex=0.5, lty=0, pch=16, ylab="", xlab="", col ="blue") 
@@ -318,4 +318,4 @@ abline(h=1, col="gray")
 abline(h=2, col="gray")
 dev.off()
 
-paste("Average CFR is: ", fc_t[delay_time]*100, "% +/- ", stdevcfr_t[delay_time]*100, "%")
+paste("Average CFR is: ", fc_t[delay_time]*100, "% +/- ", 3*stdevcfr_t[delay_time]*100, "%")
