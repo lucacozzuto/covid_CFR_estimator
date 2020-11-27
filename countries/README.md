@@ -2,7 +2,7 @@
 
 For executing the script you can use this command line
 
-R --slave --args "US" 45 60 "" "ECDC" "" "" "" < plot_trend2.0.R 
+R --slave --args "US" 45 60 "" "ECDC" "" "" "" 30 < plot_trend2.0.R 
 
 #Libraries needed 
 
@@ -27,5 +27,6 @@ Parameters:
 6. Force delay. (empty or number) You force using a fixed value for delay. Useful when multple minima are reported. 
 7. Go back in time (empty or number). You move the last day back in time.
 8. Day for the forecast (empty or number). If empty is the maximum delay
+9. Time for calculating the CFR
 
 #Adding a docker image.
