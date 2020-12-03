@@ -1,7 +1,7 @@
 <img align="right" href="https://biocore.crg.eu/" src="https://github.com/CRG-CNAG/BioCoreMiscOpen/blob/master/logo/biocore-logo_small.png" />
 
 # Covid CFR estimator
-[![DOI](https://zenodo.org/record/4304955.svg)](https://zenodo.org/record/4304955)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4304955.svg)](https://doi.org/10.5281/zenodo.4304955)
 
 
 Estimating the case fatality rate (CFR) of an ongoing pandemics is a complex problem.
