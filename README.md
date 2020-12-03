@@ -1,4 +1,9 @@
+<img align="right" href="https://biocore.crg.eu/" src="https://github.com/CRG-CNAG/BioCoreMiscOpen/blob/master/logo/biocore-logo_small.png" />
+
 # Covid CFR estimator
+[![DOI](https://zenodo.org/record/4304955.svg)](https://zenodo.org/record/4304955)
+
+
 Estimating the case fatality rate (CFR) of an ongoing pandemics is a complex problem.
 On average a person die of Covid19 after two weeks from the contagion, but delay in reporting the number of positives or deaths may alter this correlation.
 
