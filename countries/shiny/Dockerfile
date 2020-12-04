@@ -3,6 +3,7 @@ FROM rocker/shiny-verse:4.0.3
 LABEL authors="Luca Cozzuto <lucacozzuto@gmail.com>, Toni Hermoso Pulido <toni.hermoso@crg.eu>"
 
 RUN apt-get update; apt-get upgrade -y
+RUN apt-get install -y patchelf libudunits2-dev libgdal-dev gdal-bin libproj-dev proj-data proj-bin libgeos-dev
 COPY deps.R /tmp
 
 RUN Rscript /tmp/deps.R
