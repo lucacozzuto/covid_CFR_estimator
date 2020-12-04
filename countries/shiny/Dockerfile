@@ -7,6 +7,15 @@ COPY deps.R /tmp
 
 RUN Rscript /tmp/deps.R
 
+RUN mkdir -p /srv/shiny-server/covid/
+
+COPY server.R /srv/shiny-server/covid/
+COPY ui.R /srv/shiny-server/covid/
+
+RUN sudo chown -R shiny:shiny /srv/shiny-server
+
 # Clean cache
 RUN apt-get clean
 RUN set -x; rm -rf /var/lib/apt/lists/*
+
+CMD ["/usr/bin/shiny-server"]
