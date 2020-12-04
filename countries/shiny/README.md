@@ -1,2 +1,7 @@
-#To deploy the application just launch 
-rsconnect::deployApp('./')
+# Deployment
+
+## Shiny server
+
+    rsconnect::deployApp('./')
+
+## Docker

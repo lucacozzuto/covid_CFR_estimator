@@ -1,10 +1,11 @@
-FROM rocker/r-ver:4.0.2
+FROM rocker/shiny-verse:4.0.3
 
-# File Author / Maintainer
-MAINTAINER Luca Cozzuto <lucacozzuto@gmail.com>
+LABEL authors="Luca Cozzuto <lucacozzuto@gmail.com>, Toni Hermoso Pulido <toni.hermoso@crg.eu>"
 
 RUN apt-get update; apt-get upgrade -y
-RUN Rscript -e "install.packages(c('dplyr', 'stringr', 'EnvStats', 'spatialEco', 'zoo'), repos='http://cran.us.r-project.org')"
+COPY deps.R /tmp
+
+RUN Rscript /tmp/deps.R
 
 # Clean cache
 RUN apt-get clean
