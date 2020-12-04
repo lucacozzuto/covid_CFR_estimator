@@ -9,10 +9,17 @@ library("berryFunctions")
 library("zoo")
 library(reshape)
 library(gridExtra)
+library(shinycssloaders)
+#options(shiny.sanitize.errors = FALSE)
+
 
 # get the data from John Hopkins
 death_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv"
 cases_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
+death_web_US <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
+cases_web_US <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
+
+
 ecdc_web <- "https://opendata.ecdc.europa.eu/covid19/casedistribution/csv"
 ita_web<-"https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv"
 
@@ -34,9 +41,37 @@ getDataFromECDC <- function(link) {
 	return (sel_data)
 }
 
-getDataFromJH <- function(link) {
+getDataFromJH <- function(link, us=FALSE) {
 	data_raw<-read.csv(link)
 	# aggregate data and remove not useful ones
+	if (us) {
+		data_raw_sub<-subset(data_raw, select = -c(Country_Region,UID,iso2,iso3,code3,FIPS,Admin2,Lat,Long_,Combined_Key))
+		if("Population" %in% colnames(data_raw_sub)) {
+			data_raw_sub$Population<-NULL
+		}
+		colnames(data_raw_sub)[1] <- "Country.Region"
+		data_raw<-data_raw_sub
+	} else {
+		data_raw$Province.State<-NULL
+		data_raw$Lat<-NULL
+		data_raw$Long<-NULL
+	}
+	data_raw.agg<-data_raw %>%
+		group_by(Country.Region) %>% 
+		summarize_all(sum, na.rm = TRUE)
+	data_raw.agg.df<-as.data.frame(data_raw.agg)
+	data_raw.agg.df$country<-data_raw.agg.df$Country.Region
+	data_raw.agg.df$Country.Region<-NULL	
+	mdata<-melt(data_raw.agg.df, id=c("country"))
+	mdata$variable<-as.Date(str_replace_all(str_replace(mdata$variable, "X", ""), '\\.', "-"), format="%m-%d-%y")
+	return(mdata)
+}
+
+getUSDataFromJH <- function(link) {
+	data_raw<-read.csv(link)
+	# aggregate data and remove not useful ones
+	us_data<-data_raw[grep("US", data_raw$Country.Region), ]
+
 	data_raw$Province.State<-NULL
 	data_raw$Lat<-NULL
 	data_raw$Long<-NULL
@@ -51,6 +86,8 @@ getDataFromJH <- function(link) {
 	return(mdata)
 }
 
+
+
 getSingleCountryData <- function(data_all, country, source ) {
 	single_data<-data_all[grep(country, data_all$country), ]
 	merge_data<-single_data
@@ -64,7 +101,7 @@ getSingleCountryData <- function(data_all, country, source ) {
 		merge_data <- merge_data[order(merge_data$date),]
 		rownames(merge_data) <- 1:nrow(merge_data)
 	} 
-	if (source == "JH") {
+	if (grepl( "JH", source, fixed = TRUE)) {
 		pos<-as.data.frame(diff(merge_data$cases))
 		row.names(pos)<-tail(row.names(merge_data), -1)
 		merge_data2 <- merge(tail(merge_data, -1), pos, by="row.names")
@@ -221,8 +258,8 @@ plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data
 
 	for_min <- forecast
 	for_max <- for_min
-	minstd<-fc-(2*stdevcfr)
-	maxstd<-fc+(2*stdevcfr)
+	minstd<-fc-(3*stdevcfr)
+	maxstd<-fc+(3*stdevcfr)
 
 	if (minstd < 0) {
 		minstd<-0
@@ -244,7 +281,7 @@ plotTrend<-function(dateshiftdiff, country, start_time, time_window, source_data
 	perdaymin<-format(round((for_min-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
 	perdaymax<-format(round((for_max-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
 
-	subt1<-paste(country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths.", source_data, format(last_day, "%d-%m-%y"), "The delay is", delay_time, "days", "CFR is:", round(fc_t[delay_time]*100, 2), "+/-", round(stdevcfr*100, 2), "%", sep=" ")
+	subt1<-paste(country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths.", source_data, format(last_day, "%d-%m-%y"), "The delay is", delay_time, "days", "CFR is:", round(fc_t[delay_time]*100, 2), "+/-", 3*round(stdevcfr*100, 2), "%", sep=" ")
 	subt2<-paste("Forecast in",forecast_time, "days", format(forecast, big.mark=","), "(", format(for_min, big.mark=","), "/", format(for_max, big.mark=","),").", "Per day:", perday, "(", perdaymin, "/", perdaymax, ")", sep=" ")
 	plot(zoo((dateshiftdiff$cases), dateshiftdiff$date), xaxt='n', yaxt='n', main = paste(c(subt1, subt2), sep=""), ylim=c(0,ylim_cases), type = c("p"), cex=0.5, lty=0, pch=16, ylab="", xlab="", col ="blue") 
 	timeAxis(1, midmonth=TRUE, format="%b")
@@ -339,8 +376,8 @@ plotCFR<-function(dateshiftdiff, country, start_time, time_window, source_data, 
 
 	for_min <- forecast
 	for_max <- for_min
-	minstd<-fc-(2*stdevcfr)
-	maxstd<-fc+(2*stdevcfr)
+	minstd<-fc-(3*stdevcfr)
+	maxstd<-fc+(3*stdevcfr)
 
 	if (minstd < 0) {
 		minstd<-0
@@ -381,10 +418,21 @@ pos_jh<-getDataFromJH(cases_web)
 colnames(deat_jh)<-c("country", "date", "deaths")
 colnames(pos_jh)<-c("country", "date", "cases")
 jh_data<-pos_jh
-
 jh_data$deaths<-deat_jh$deaths
+
+deat_jh_us<-getDataFromJH(death_web_US, TRUE)
+pos_jh_us<-getDataFromJH(cases_web_US, TRUE)
+colnames(deat_jh_us)<-c("country", "date", "deaths")
+colnames(pos_jh_us)<-c("country", "date", "cases")
+jhus_data<-pos_jh_us
+jhus_data$deaths<-deat_jh_us$deaths
+
+
 ecdc_data<-(getDataFromECDC(ecdc_web))
 ita_data<-(getDataFromITA(ita_web))
+
+#single_country_data<-getSingleCountryData(jhus_data, "Alabama", "JHUS")
+
 
 # Define server logic ----
 server <- function(input, output) {
@@ -394,6 +442,7 @@ server <- function(input, output) {
     switch(input$source_data,
            "ECDC" = ecdc_data,
            "JH" = jh_data,
+           "JHUSA" = jhus_data,
            "PC" = ita_data)
   })
    # choose the country
@@ -408,9 +457,13 @@ server <- function(input, output) {
                        min = 2, max = input$time_window, value = 30)
 	})
 
-	output$plot <- renderPlot({
-		single_country_data<-getSingleCountryData(datasetInput(), input$country, input$source_data)
-		plotTrend(single_country_data, input$country, input$start_time , input$time_window, input$source_data,  input$go_back, input$for_time, input$force_ylim, input$force_del , input$cfr_time)
+	output$plot <- renderPlot({	
+		#validate(
+		#	need(is.null(datasetInput()), ""),
+		#	need(is.null(input$country), "")
+		#)
+		single_country_data<-getSingleCountryData(datasetInput(), input$country, input$source_data)      
+    	plotTrend(single_country_data, input$country, input$start_time , input$time_window, input$source_data,  input$go_back, input$for_time, input$force_ylim, input$force_del , input$cfr_time)
     }, 	height=600, width=1200)
 
 	output$plot2 <- renderPlot({
