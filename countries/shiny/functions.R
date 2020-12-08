@@ -309,8 +309,8 @@ makeRes<-function(predCFR, source, forday) {
 	dateshiftdiff <-predCFR$dateshiftdiff
 	last_day<-format(tail(dateshiftdiff$date, 1), "%d-%m-%y")
 	country<-as.vector(head(predCFR$dateshiftdiff, 1)[,1])
-	tot_deaths<-format(sum(dateshiftdiff[,3]), big.mark=",")
-	tot_pos<-format(sum(dateshiftdiff[,4]), big.mark=",")
+	tot_deaths<-format(sum(dateshiftdiff$deaths), big.mark=",")
+	tot_pos<-format(sum(dateshiftdiff$cases), big.mark=",")
 	CFR<-predCFR$fc
 	forecast<-format(predCFR$forecast, big.mark=",")
 	for_min<-format(predCFR$for_min, big.mark=",")

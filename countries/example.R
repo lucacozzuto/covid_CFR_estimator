@@ -12,11 +12,17 @@ ecdc_data<-(getDataFromECDC(ecdc_web))
 ita_data<-(getDataFromITA(ita_web))
 
 #Example for loading a single country
-#single_country_data<-getSingleCountryData(jhus_data, "Alabama", "JHUSA")
-get the predictions
+source<-"ECDC"
+#get the predictions
+single_country_data<-getSingleCountryData(ecdc_data, "Italy", source)
 #predCFR<-calcCFR(single_country_data, start_time, time_window, go_back, forecast_time, force_delay, cfr_estimation_time)
-#predCFR<-calcCFR(single_country_data, 45, 90, NULL, 7, NULL, 30)
+forecast<-1
+go_back<-1
+predCFR<-calcCFR(single_country_data, 45, 90, go_back, forecast, 0, 30)
+# predCFR, source, forecast
+makeRes(predCFR, source, forecast)
 
+#check total cases
 
 
 
