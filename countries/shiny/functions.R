@@ -134,6 +134,8 @@ remove_outliers <- function(x, na.rm = TRUE, ...) {
 plotVAR<-function(predCFR) {
 	cvdevcfr_t<-predCFR$cvdevcfr_t
 	delay_time<-predCFR$delay
+	delay_time
+	cvdevcfr_t[is.na(cvdevcfr_t)]<-0
 	locmin<-local.min.max(cvdevcfr_t)
 	minim_idx<-match(locmin$maxima, cvdevcfr_t)
 	title(main = paste0("Estimated delay is: ", delay_time), sub=paste0("Maxima", paste(minim_idx, collapse=",")))	
