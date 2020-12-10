@@ -30,12 +30,13 @@ ui <- fluidPage(
     sliderInput("go_back", h3("Go back in time"),
                        min = 0, max = 120, value = 0),
 
-    uiOutput("ui_cfr"),
+    sliderInput("cfr_time", h3("Days for CFR estimation"),
+                       min = 2, max = 60, value = 30),
 
-    sliderInput("for_time", h3("Days for forecast"),
-                       min = 1, max = 30, value = 7),
+    sliderInput("for_time", h3("Days for forecast"), min=0, max=30, value=7,
+                       step=1)
     ),
-    
+
     mainPanel(
     p("Author: Luca Cozzuto"),
       tabsetPanel(

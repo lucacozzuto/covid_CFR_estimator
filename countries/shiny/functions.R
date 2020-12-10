@@ -15,8 +15,6 @@ death_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/c
 cases_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
 death_web_US <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
 cases_web_US <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
-
-
 ecdc_web <- "https://opendata.ecdc.europa.eu/covid19/casedistribution/csv"
 ita_web<-"https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv"
 
@@ -87,31 +85,33 @@ getUSDataFromJH <- function(link) {
 
 getSingleCountryData <- function(data_all=NULL, country=NULL, source=NULL ) {
 	ord_data<-NULL
-	if (country %in% data_all$country) {
-		single_data<-data_all[grep(country, data_all$country), ]
-		merge_data<-single_data
-		if (source != "ECDC") {
-			death<-as.data.frame(diff(single_data$deaths))
-			row.names(death)<-tail(row.names(single_data), -1)
-			merge_data<-merge(tail(single_data, -1), death, by="row.names")
-			merge_data$Row.names<-NULL
-			merge_data$deaths<-NULL
-			names(merge_data)<-c("country", "date","cases", "deaths")
-			merge_data <- merge_data[order(merge_data$date),]
-			rownames(merge_data) <- 1:nrow(merge_data)
-		} 
-		if (grepl( "JH", source, fixed = TRUE)) {
-			pos<-as.data.frame(diff(merge_data$cases))
-			row.names(pos)<-tail(row.names(merge_data), -1)
-			merge_data2 <- merge(tail(merge_data, -1), pos, by="row.names")
-			merge_data2$Row.names<-NULL
-			merge_data2$cases<-NULL
-			names(merge_data2)<-c("country", "date","deaths", "cases")
-			merge_data <- merge_data2[, c(1, 2, 4, 3)]
-			merge_data<-merge_data2	
+	if (!is.null(data_all)) {
+		if (country %in% data_all$country) {
+			single_data<-data_all[grep(country, data_all$country), ]
+			merge_data<-single_data
+			if (source != "ECDC") {
+				death<-as.data.frame(diff(single_data$deaths))
+				row.names(death)<-tail(row.names(single_data), -1)
+				merge_data<-merge(tail(single_data, -1), death, by="row.names")
+				merge_data$Row.names<-NULL
+				merge_data$deaths<-NULL
+				names(merge_data)<-c("country", "date","cases", "deaths")
+				merge_data <- merge_data[order(merge_data$date),]
+				rownames(merge_data) <- 1:nrow(merge_data)
+			} 
+			if (grepl( "JH", source, fixed = TRUE)) {
+				pos<-as.data.frame(diff(merge_data$cases))
+				row.names(pos)<-tail(row.names(merge_data), -1)
+				merge_data2 <- merge(tail(merge_data, -1), pos, by="row.names")
+				merge_data2$Row.names<-NULL
+				merge_data2$cases<-NULL
+				names(merge_data2)<-c("country", "date","deaths", "cases")
+				merge_data <- merge_data2[, c(1, 2, 4, 3)]
+				merge_data<-merge_data2	
+			}
+			ord_data <- merge_data[order(merge_data$date),]
+			rownames(ord_data) <- 1:nrow(ord_data)
 		}
-		ord_data <- merge_data[order(merge_data$date),]
-		rownames(ord_data) <- 1:nrow(ord_data)
 	}
 	return (ord_data)
 }
@@ -134,177 +134,222 @@ remove_outliers <- function(x, na.rm = TRUE, ...) {
 plotVAR<-function(predCFR) {
 	cvdevcfr_t<-predCFR$cvdevcfr_t
 	delay_time<-predCFR$delay
-	plotmin<-locmin<-local.min.max(log(cvdevcfr_t))
-	minim_idx<-match(locmin$minima, log(cvdevcfr_t))
-	title(main = paste0("Estimated delay is: ", delay_time), sub=paste0("Minima: ", paste(minim_idx, collapse=",")))	
+	locmin<-local.min.max(cvdevcfr_t)
+	minim_idx<-match(locmin$maxima, cvdevcfr_t)
+	title(main = paste0("Estimated delay is: ", delay_time), sub=paste0("Maxima", paste(minim_idx, collapse=",")))	
 
 }
 
+calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, for_time=7, force_del=0, cfr_time=30) {
+	results<-NULL
+	if (!is.null(dateshiftdiff )) {
+		if (is.null(for_time)) {
+			for_time<-0
+		}
+		if (as.numeric(go_back > 0)) {
+			dateshiftdiff<-head(dateshiftdiff, -as.numeric(go_back))
+		}
+		last_day<-tail(dateshiftdiff$date, 1)
 
-calcCFR<-function(dateshiftdiff, start_time, time_window, go_back=0, for_time=0, force_del=0, cfr_time=30) {
-	if (as.numeric(go_back > 0)) {
-		dateshiftdiff<-head(dateshiftdiff, -as.numeric(go_back))
-	}
-	last_day<-tail(dateshiftdiff$date, 1)
+		time_mavg<-7
+		# make moving average
+		fitdT7 <- getFit(dateshiftdiff$deaths, time_mavg)
+		fitT7 <- getFit(dateshiftdiff$cases, time_mavg)
 
-	time_mavg<-7
-	# make moving average
-	fitdT7 <- getFit(dateshiftdiff$deaths, time_mavg)
-	fitT7 <- getFit(dateshiftdiff$cases, time_mavg)
+		### predict delay
+		props_t<-c()
+		fc_t<-c()
+		stdevcfr_t<-c()
+		cvdevcfr_t<-c()
 
-	### predict delay
-	props_t<-c()
-	fc_t<-c()
-	stdevcfr_t<-c()
-	cvdevcfr_t<-c()
+		for(i in 1:start_time) {
+			props_t <- tail(fitdT7, -i)/head(fitT7, -i)
+		#	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
+		#median absolute deviation or stdev without outliers?
+		#stdevcfr_t[i] <- mad(tail(props_t, n=time_window))
+			# remove outliers and calc average and stdev
+			no_out<-remove_outliers(tail(props_t, n=cfr_time))
+			fc_t[i] <- mean(no_out, na.rm =TRUE)
+			stdevcfr_t[i] <- sd(no_out, na.rm =TRUE)
+			win_pos<-tail(tail(fitdT7, -i), time_window)
+			win_deat<-tail(head(fitT7, -i), time_window)
+			#cvdevcfr_t[i]<-ccf(win_pos, win_deat, na.action=na.omit)
+			#cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$estimate
+		    cor.testres<-cor.test(win_pos, win_deat)
+		    cor.val<-NA
+		    if (cor.testres$p.value<0.01) {
+		    	cor.val<-cor.testres$estimate
+		    }
+			cvdevcfr_t[i] <- cor.val
+		}
 
-	for(i in 1:start_time) {
-	    props_t <- tail(fitdT7, -i)/head(fitT7, -i)
-    #	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
-    #median absolute deviation or stdev without outliers?
-    #stdevcfr_t[i] <- mad(tail(props_t, n=time_window))
-		# remove outliers and calc average and stdev
-		no_out<-remove_outliers(tail(props_t, n=cfr_time))
-    	fc_t[i] <- mean(no_out, na.rm =TRUE)
-		stdevcfr_t[i] <- sd(no_out, na.rm =TRUE)
-    	win_pos<-tail(tail(fitdT7, -i), time_window)
-    	win_deat<-tail(head(fitT7, -i), time_window)
-		cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$p.value
-	}
+# check outliers
+# inverted win_pos and win_deat
+		delay_time<-which.max(cvdevcfr_t)
 
-	delay_time<-which.min(cvdevcfr_t)
+		if (force_del > 0) {
+			delay_time = as.numeric(force_del)
+		}
 
-	if (force_del > 0) {
-		delay_time = as.numeric(force_del)
-	}
-
-
-
-	forecast_time<-delay_time
-	
-	if (as.numeric(for_time) == 0) {
-   		forecast_time<-delay_time
-	} else if (as.numeric(for_time) > delay_time) {
 		forecast_time<-delay_time
-	} else { forecast_time<-as.numeric(for_time) }
-
-	props<-tail(fitdT7, -delay_time)/head(fitT7, -delay_time)*100
-	fc<-fc_t[delay_time]
-	stdevcfr<-stdevcfr_t[delay_time]
-	forecast<-sum(dateshiftdiff$deaths)
-
-	for_min <- forecast
-	for_max <- for_min
-	minstd<-fc-(3*stdevcfr)
-	maxstd<-fc+(3*stdevcfr)
-
-	if (minstd < 0) {
-		minstd<-0
-	}
 	
-	for(i in 1:forecast_time) {
-		forecast = forecast + fitT7[length(props)+i]*fc
-		for_min = for_min + fitT7[length(props)+i]*(minstd)
-		for_max = for_max + fitT7[length(props)+i]*(maxstd)
-	}
-	for_min = round(for_min)
-	for_max = round(for_max)
+		if (as.numeric(for_time) == 0) {
+			forecast_time<-delay_time
+		}
+		#else if (as.numeric(for_time) > delay_time) {
+		#	forecast_time<-delay_time
+		#} 
+		else { forecast_time<-as.numeric(for_time) }
 
-	diff_for<-round(forecast)-sum(dateshiftdiff$deaths)
-	forecast<-round(forecast, 0)
+		props<-tail(fitdT7, -delay_time)/head(fitT7, -delay_time)*100
+		fc<-fc_t[delay_time]
+		stdevcfr<-stdevcfr_t[delay_time]
+		forecast<-sum(dateshiftdiff$deaths)
 
-	perday<-format(round((forecast-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
-	perdaymin<-format(round((for_min-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
-	perdaymax<-format(round((for_max-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
+		for_min <- forecast
+		for_max <- for_min
+		minstd<-fc-(3*stdevcfr)
+		maxstd<-fc+(3*stdevcfr)
 
-	results<-list("fitp7" = fitT7, 
-		"fitd7" = fitdT7,
-		"delay" = delay_time,
-		"props" = props,
-		"fc_t" = fc_t,
-		"fc" = fc,
-		"dateshiftdiff" = dateshiftdiff,
-		"cvdevcfr_t" = cvdevcfr_t,
-		"stdevcfr" = stdevcfr,
-		"forecast" = forecast,
-		"for_min" =for_min,
-		"for_max" = for_max,		
-		"perday" = perday,
-		"perdaymin" = perdaymin,
-		"perdaymax" = perdaymax
-	)
+		if (minstd < 0) {
+			minstd<-0
+		}
 	
+		for(i in 1:forecast_time) {
+			forecast = forecast + fitT7[length(props)+i]*fc
+			for_min = for_min + fitT7[length(props)+i]*(minstd)
+			for_max = for_max + fitT7[length(props)+i]*(maxstd)
+		}
+		for_min = round(for_min)
+		for_max = round(for_max)
+
+		diff_for<-round(forecast)-sum(dateshiftdiff$deaths)
+		forecast<-round(forecast, 0)
+
+		perday<-format(round((forecast-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
+		perdaymin<-format(round((for_min-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
+		perdaymax<-format(round((for_max-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
+
+		results<-list("fitp7" = fitT7, 
+			"fitd7" = fitdT7,
+			"delay" = delay_time,
+			"props" = props,
+			"fc_t" = fc_t,
+			"fc" = fc,
+			"dateshiftdiff" = dateshiftdiff,
+			"cvdevcfr_t" = cvdevcfr_t,
+			"stdevcfr" = stdevcfr,
+			"forecast" = forecast,
+			"for_min" =for_min,
+			"for_max" = for_max,		
+			"perday" = perday,
+			"perdaymin" = perdaymin,
+			"perdaymax" = perdaymax,
+			"for_time" = for_time
+		)
+	}
 	return(results)
 }
 
-plotTrend<-function(predCFR, force_ylim=0) {
-	dateshiftdiff <-predCFR$dateshiftdiff
-	props <-predCFR$props
-	fitdT7 <-predCFR$fitd7
-	fitT7 <-predCFR$fitp7
-	delay_time<-predCFR$delay
-	fc_t<-predCFR$fc_t
-	country<-as.vector(head(predCFR$dateshiftdiff, 1)[,1])
+plotTrend<-function(predCFR=NULL, force_ylim=0) {
+	if (!is.null(predCFR)) {
+		dateshiftdiff <-predCFR$dateshiftdiff
+		props <-predCFR$props
+		fitdT7 <-predCFR$fitd7
+		fitT7 <-predCFR$fitp7
+		delay_time<-predCFR$delay
+		fc_t<-predCFR$fc_t
+		country<-as.vector(head(predCFR$dateshiftdiff, 1)[,1])
 	
-	# max Y
-	ylim_cases <- max(dateshiftdiff$cases)
+		# max Y
+		ylim_cases <- max(dateshiftdiff$cases)
 
-	if (force_ylim > 0) {
-		ylim_cases <- as.numeric(force_ylim)
+		if (force_ylim > 0) {
+			ylim_cases <- as.numeric(force_ylim)
+		}
+		ylim_deaths <- ylim_cases/10
+
+
+		#subt1<-paste(format(last_day, "%d-%m-%y"), source_data, country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths.", , "The delay is", delay_time, "days.", "The CFR is:", round(fc_t[delay_time]*100, 2), "+/-", 3*round(stdevcfr*100, 2), "%", sep=" ")
+		#subt2<-paste("Forecast of total deaths in ",forecast_time, "days", format(forecast, big.mark=","), "(", format(for_min, big.mark=","), "/", format(for_max, big.mark=","),").", "Forecast of daily deaths:", perday, "(", perdaymin, "/", perdaymax, ")", sep=" ")
+		par(mar=c(10, 8, 4, 10) + 0.1)
+		plot(zoo((dateshiftdiff$cases), dateshiftdiff$date), xaxt='n', yaxt='n', ylim=c(0,ylim_cases), type = c("p"), cex=0.5, lty=0, pch=16, ylab="", xlab="", col ="blue") 
+		timeAxis(1, midmonth=TRUE, format="%b")
+
+		lines(zoo((fitT7), dateshiftdiff$date), col="blue")
+		lines(zoo((fitdT7)*1/fc_t[delay_time], dateshiftdiff$date-delay_time), col="darkblue", lty=3)
+
+		axis(2, col="blue",col.axis="blue",las=1)
+		mtext("New cases",side=2,line=4, col="blue")
+
+		box()
+
+		par(new=TRUE)
+
+		plot(zoo((dateshiftdiff$deaths), dateshiftdiff$date), yaxt='n', xaxt="n", type = c("p"), cex=0.5, lty=0, ylim=c(0,ylim_deaths), xlab="", pch=3, ylab="", col ="red") 
+		lines(zoo((fitdT7), dateshiftdiff$date), col="red")
+		mtext("New deaths",side=4,col="red",line=4) 
+		axis(4, col="red", col.axis="red",las=1)
+	
+		par(new=TRUE)
+		par(mar=c(0, 8, 35, 10) + 0.1)
+
+		props[1:65]<-0
+		barplot(-props, yaxt='n', ylim=c(-10,0), col=rgb(red=51, green=51, blue=255, alpha=10, maxColorValue=255))
+
+		axis(2, cex.axis=.7, labels=FALSE, at=c(0,-2,-4,-8) ,tck = 0.02, font=1)
+		text(-1, c(-1, -3,-5,-9), c("0%","2%","4%","8%"), cex = 1)
+		abline(h=-2, col="black", lty=2)
+		mtext("Proportion",side=2,col="black",line=2) 
+	} else {
+		NULL
 	}
-	ylim_deaths <- ylim_cases/10
-
-
-	#subt1<-paste(format(last_day, "%d-%m-%y"), source_data, country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths.", , "The delay is", delay_time, "days.", "The CFR is:", round(fc_t[delay_time]*100, 2), "+/-", 3*round(stdevcfr*100, 2), "%", sep=" ")
-	#subt2<-paste("Forecast of total deaths in ",forecast_time, "days", format(forecast, big.mark=","), "(", format(for_min, big.mark=","), "/", format(for_max, big.mark=","),").", "Forecast of daily deaths:", perday, "(", perdaymin, "/", perdaymax, ")", sep=" ")
-	par(mar=c(10, 8, 4, 10) + 0.1)
-	plot(zoo((dateshiftdiff$cases), dateshiftdiff$date), xaxt='n', yaxt='n', ylim=c(0,ylim_cases), type = c("p"), cex=0.5, lty=0, pch=16, ylab="", xlab="", col ="blue") 
-	timeAxis(1, midmonth=TRUE, format="%b")
-
-	lines(zoo((fitT7), dateshiftdiff$date), col="blue")
-	lines(zoo((fitdT7)*1/fc_t[delay_time], dateshiftdiff$date-delay_time), col="darkblue", lty=3)
-
-	axis(2, col="blue",col.axis="blue",las=1)
-	mtext("New cases",side=2,line=4, col="blue")
-
-	box()
-
-	par(new=TRUE)
-
-	plot(zoo((dateshiftdiff$deaths), dateshiftdiff$date), yaxt='n', xaxt="n", type = c("p"), cex=0.5, lty=0, ylim=c(0,ylim_deaths), xlab="", pch=3, ylab="", col ="red") 
-	lines(zoo((fitdT7), dateshiftdiff$date), col="red")
-	mtext("New deaths",side=4,col="red",line=4) 
-	axis(4, col="red", col.axis="red",las=1)
-	
-	par(new=TRUE)
-	par(mar=c(0, 8, 35, 10) + 0.1)
-
-	props[1:65]<-0
-	barplot(-props, yaxt='n', ylim=c(-10,0), col=rgb(red=51, green=51, blue=255, alpha=10, maxColorValue=255))
-
-	axis(2, cex.axis=.7, labels=FALSE, at=c(0,-2,-4,-8) ,tck = 0.02, font=1)
-	text(-1, c(-1, -3,-5,-9), c("0%","2%","4%","8%"), cex = 1)
-	abline(h=-2, col="black", lty=2)
-	mtext("Proportion",side=2,col="black",line=2) 
-
 }
 
 #plotTrend(predCFR)
 
-plotCFR<-function(predCFR) {
-	dateshiftdiff <-predCFR$dateshiftdiff
-	cfr_perc <-predCFR$props
-	delay_time<-predCFR$delay
-	last_day<-tail(dateshiftdiff$date, 1)
+plotCFR<-function(predCFR=NULL) {
+	if (!is.null(predCFR)) {
+		dateshiftdiff <-predCFR$dateshiftdiff
+		cfr_perc <-predCFR$props
+		delay_time<-predCFR$delay
+		last_day<-tail(dateshiftdiff$date, 1)
 	
-	plot(zoo(cfr_perc, tail(dateshiftdiff$date, -delay_time)), xaxt='n',yaxs="i" , type = c("l"), ylim=c(0,10), xlab="Months", ylab="CFR (in %).", col ="red") 
-	timeAxis(1, midmonth=TRUE, format="%b")
-	abline(h=1, col="gray")
-	abline(h=2, col="gray")
-
+		plot(zoo(cfr_perc, tail(dateshiftdiff$date, -delay_time)), xaxt='n',yaxs="i" , type = c("l"), ylim=c(0,10), xlab="Months", ylab="CFR (in %).", col ="red") 
+		timeAxis(1, midmonth=TRUE, format="%b")
+		abline(h=1, col="gray")
+		abline(h=2, col="gray")
+	} else {
+		NULL
+	}
 }
 
-makeRes<-function(predCFR, source, forday) {
+makeRes<-function(predCFR=NULL, source, forday=7) {
+	if (!is.null(predCFR)) {
+		delay_time<-predCFR$delay
+		dateshiftdiff <-predCFR$dateshiftdiff
+		last_day<-format(tail(dateshiftdiff$date, 1), "%d-%m-%y")
+		country<-as.vector(head(predCFR$dateshiftdiff, 1)[,1])
+		tot_deaths<-format(sum(dateshiftdiff$deaths), big.mark=",")
+		tot_pos<-format(sum(dateshiftdiff$cases), big.mark=",")
+		CFR<-predCFR$fc
+		forecast<-format(predCFR$forecast, big.mark=",")
+		for_min<-format(predCFR$for_min, big.mark=",")
+		for_max<-format(predCFR$for_max, big.mark=",")
+		perday<-predCFR$perday 
+		perdaymin<-predCFR$perdaymin 
+		perdaymax<-predCFR$perdaymax 
+		stdevcfr<-predCFR$stdevcfr
+
+		paste0(country, ": ", tot_deaths, " deaths", ". Date: ", last_day,". The estimated lag between positives and deaths is: ", delay_time, ".<br>\n",
+		"Dataset: ", source, ". The estimated CFR is: ", round(CFR*100, 2), " +/- ", 3*round(stdevcfr*100, 2), ".</br>\n",
+		"Fatalities forecasted for the next ", forday, " days: ", forecast, " ( ", for_min, " / ", for_max, " ).\nDeaths forecasted per day: ", perday, " ( ", perdaymin, " / ", perdaymax, " ).\n")
+	} else {
+		NULL
+	}
+}
+
+makeTable<-function(predCFR) {
 	delay_time<-predCFR$delay
 	dateshiftdiff <-predCFR$dateshiftdiff
 	last_day<-format(tail(dateshiftdiff$date, 1), "%d-%m-%y")
@@ -315,17 +360,13 @@ makeRes<-function(predCFR, source, forday) {
 	forecast<-format(predCFR$forecast, big.mark=",")
 	for_min<-format(predCFR$for_min, big.mark=",")
 	for_max<-format(predCFR$for_max, big.mark=",")
-	forecast<-format(predCFR$forecast, big.mark=",")
-	for_min<-format(predCFR$for_min, big.mark=",")
-	for_max<-format(predCFR$for_max, big.mark=",")
 	perday<-predCFR$perday 
 	perdaymin<-predCFR$perdaymin 
 	perdaymax<-predCFR$perdaymax 
 	stdevcfr<-predCFR$stdevcfr
-
-	paste0(country, ": ", tot_deaths, " deaths", ". Date: ", last_day,". The estimated lag between positives and deaths is: ", delay_time, ".<br>\n",
-	"Dataset: ", source, ". The estimated CFR is: ", round(CFR*100, 2), " +/- ", 3*round(stdevcfr*100, 2), ".</br>\n",
-	"Fatalities forecasted for the next ", forday, " days: ", forecast, " ( ", for_min, " / ", for_max, " ).\nDeaths forecasted per day: ", perday, " ( ", perdaymin, " / ", perdaymax, " ).\n")
+	header = c("Country", "Day", "Deaths", "CFR", "3stdev", "Est lag", "Forecast", "Min forecast", "Max forecast")
+	res = c(country, last_day, tot_deaths, round(CFR*100, 2), 3*round(stdevcfr*100, 2), delay_time, forecast, for_min, for_max)
+	return(list("header"=header, "res"=res))
 }
 
 getDataFromJH<-function(death_web, cases_web, single=FALSE){

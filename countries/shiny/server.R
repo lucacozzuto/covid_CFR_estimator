@@ -20,7 +20,7 @@ ita_data<-(getDataFromITA(ita_web))
 
 
 # Define server logic ----
-server <- function(input, output) {
+server <- function(input, output, session) {
  
   # Return the requested dataset
   datasetInput <- reactive({
@@ -31,26 +31,24 @@ server <- function(input, output) {
            "JHUSA" = jhus_data,
            "PC" = ita_data)
   })
-   # choose the country
+
+    observe({
+    
+       # choose the country
    output$ui <- renderUI({
 		source_data<-datasetInput()
   		countries <- unique(source_data$country)
     	selectInput("country", h3("Choose country"), countries, selected="Italy") 
 	})
 
-   output$ui_cfr <- renderUI({
-    sliderInput("cfr_time", h3("Days for CFR estimation"),
-                       min = 2, max = input$time_window, value = 30)
-	})
-
   plot = reactiveVal()
   getData = reactiveVal()
-
+ 	      
  	getData = reactive({
 		res = NULL
 	  	single_country_data = getSingleCountryData(datasetInput(), input$country, input$source_data)
 		if (!is.null(single_country_data)) {
-			res =calcCFR(single_country_data, input$start_time, input$time_window, input$go_back,input$for_time, input$force_del, input$cfr_time  )
+			res =calcCFR(single_country_data, input$start_time, input$time_window, input$go_back, input$for_time, input$force_del, input$cfr_time  )
 		} 
 		return(res)
 	})
@@ -79,5 +77,7 @@ server <- function(input, output) {
   	} else {
   		paste0("Loading data...")
   	}
+  })
+  
   })
 }

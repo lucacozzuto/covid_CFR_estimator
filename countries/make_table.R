@@ -1,6 +1,6 @@
 #Using the functions
 source("functions.R")
-#R --slave --args "Italy" 45 90 "ECDC" "7" "91" "30" "outfile.txt"  < make_table.R 
+#R --slave --args "Italy" 45 90 "ECDC" "7" "1" "91" "30" "outfile.txt"  < make_table.R 
 
 args<-commandArgs(TRUE)
 
@@ -9,9 +9,10 @@ start_time <- as.numeric(args[2])
 time_window <- as.numeric(args[3])
 source <- args[4]
 forecast <- as.numeric(args[5])
-goback <- as.numeric(args[6])
-time_CFR <- as.numeric(args[7])
-outfile <- args[8]
+gobacka <- as.numeric(args[6])
+gobackb <- as.numeric(args[7])
+time_CFR <- as.numeric(args[8])
+outfile <- args[9]
 
 if (source == "ECDC") {
 	my_data<-getDataFromECDC(ecdc_web)
@@ -26,7 +27,7 @@ if (source == "ECDC") {
 single_country_data<-getSingleCountryData(my_data, country, source)
 
 num<-0
-for(i in seq(91, 0, -forecast)) {
+for(i in seq(gobackb, gobacka, -forecast)) {
 	predCFR<-calcCFR(single_country_data, start_time, time_window, i, forecast, 0, time_CFR)
 #	if (forecast>predCFR$delay) {
 #		predCFR$forecast<-NA
