@@ -12,10 +12,10 @@ ecdc_data<-(getDataFromECDC(ecdc_web))
 ita_data<-(getDataFromITA(ita_web))
 
 #Example for loading a single country
-source<-"ECDC"
+source<-"JH"
 #get the predictions
-single_country_data<-getSingleCountryData(ecdc_data, "Italy", source)
-#predCFR<-calcCFR(single_country_data, start_time, time_window, go_back, forecast_time, force_delay, cfr_estimation_time)
+single_country_data<-getSingleCountryData(jh_data, "US", source)
+predCFR<-calcCFR(single_country_data, 45, 90, 0, 7, 0, 30)
 
 num<-0
 forecast<-7

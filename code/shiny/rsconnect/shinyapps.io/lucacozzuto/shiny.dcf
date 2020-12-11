@@ -1,0 +1,10 @@
+name: shiny
+title:
+username:
+account: lucacozzuto
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3265235
+bundleId: 3972156
+url: https://lucacozzuto.shinyapps.io/shiny/
+when: 1607628293.63683

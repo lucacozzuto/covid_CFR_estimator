@@ -179,7 +179,7 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 			#cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$estimate
 		    cor.testres<-cor.test(win_pos, win_deat)
 		    cor.val<-NA
-		    if (cor.testres$p.value<0.01) {
+		    if (cor.testres$p.value<=0.05) {
 		    	cor.val<-cor.testres$estimate
 		    }
 			cvdevcfr_t[i] <- cor.val
@@ -187,21 +187,22 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 
 # check outliers
 # inverted win_pos and win_deat
-		delay_time<-which.max(cvdevcfr_t)
-
+		#check no values
+		if (all(is.na(cvdevcfr_t))) {
+			delay_time<-start_time
+		} else {	
+			delay_time<-which.max(cvdevcfr_t)
+		}
 		if (force_del > 0) {
 			delay_time = as.numeric(force_del)
 		}
 
 		forecast_time<-delay_time
-	
 		if (as.numeric(for_time) == 0) {
 			forecast_time<-delay_time
+		} else { 
+			forecast_time<-as.numeric(for_time) 
 		}
-		#else if (as.numeric(for_time) > delay_time) {
-		#	forecast_time<-delay_time
-		#} 
-		else { forecast_time<-as.numeric(for_time) }
 
 		props<-tail(fitdT7, -delay_time)/head(fitT7, -delay_time)*100
 		fc<-fc_t[delay_time]
