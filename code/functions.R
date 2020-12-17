@@ -8,6 +8,7 @@ library("berryFunctions")
 library("zoo")
 library(reshape)
 library(gridExtra)
+#libray(apricom)
 
 			
 # get the data from John Hopkins
@@ -168,9 +169,9 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 			props_t <- tail(fitdT7, -i)/head(fitT7, -i)
 		#	fc_t[i] <- mean(tail(props_t, n=time_window), trim = 0.10)
 		#median absolute deviation or stdev without outliers?
-		#stdevcfr_t[i] <- mad(tail(props_t, n=time_window))
 			# remove outliers and calc average and stdev
-			no_out<-remove_outliers(tail(props_t, n=cfr_time))
+			no_out<-tail(props_t, n=cfr_time)
+			#no_out<-remove_outliers(tail(props_t, n=cfr_time))
 			fc_t[i] <- mean(no_out, na.rm =TRUE)
 			stdevcfr_t[i] <- sd(no_out, na.rm =TRUE)
 			win_pos<-tail(tail(fitdT7, -i), time_window)
@@ -179,10 +180,15 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 			#cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$estimate
 		    cor.testres<-cor.test(win_pos, win_deat)
 		    cor.val<-NA
-		    if (cor.testres$p.value<=0.05) {
-		    	cor.val<-cor.testres$estimate
-		    }
+		    if (!is.na(cor.testres$p.value)) {
+			    if (cor.testres$p.value<=0.05) {
+			    	cor.val<-cor.testres$estimate
+			    }
+			}
 			cvdevcfr_t[i] <- cor.val
+			#cvdevcfr_t[i] <- mad(tail(props_t, n=time_window))
+			#pos.betas <- ols.rgr(win_pos)
+			#cvdevcfr_t[i] <- sse(b = pos.betas, dataset = win_deat)[,1]
 		}
 
 # check outliers
@@ -192,6 +198,7 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 			delay_time<-start_time
 		} else {	
 			delay_time<-which.max(cvdevcfr_t)
+			#delay_time<-which.min(cvdevcfr_t)
 		}
 		if (force_del > 0) {
 			delay_time = as.numeric(force_del)
@@ -211,8 +218,8 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 
 		for_min <- forecast
 		for_max <- for_min
-		minstd<-fc-(3*stdevcfr)
-		maxstd<-fc+(3*stdevcfr)
+		minstd<-fc-(1*stdevcfr)
+		maxstd<-fc+(1*stdevcfr)
 
 		if (minstd < 0) {
 			minstd<-0
@@ -273,7 +280,7 @@ plotTrend<-function(predCFR=NULL, force_ylim=0) {
 		ylim_deaths <- ylim_cases/10
 
 
-		#subt1<-paste(format(last_day, "%d-%m-%y"), source_data, country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths.", , "The delay is", delay_time, "days.", "The CFR is:", round(fc_t[delay_time]*100, 2), "+/-", 3*round(stdevcfr*100, 2), "%", sep=" ")
+		#subt1<-paste(format(last_day, "%d-%m-%y"), source_data, country, format(sum(dateshiftdiff$deaths), big.mark=","),"deaths.", , "The delay is", delay_time, "days.", "The CFR is:", round(fc_t[delay_time]*100, 2), "+/-", 1*round(stdevcfr*100, 2), "%", sep=" ")
 		#subt2<-paste("Forecast of total deaths in ",forecast_time, "days", format(forecast, big.mark=","), "(", format(for_min, big.mark=","), "/", format(for_max, big.mark=","),").", "Forecast of daily deaths:", perday, "(", perdaymin, "/", perdaymax, ")", sep=" ")
 		par(mar=c(10, 8, 4, 10) + 0.1)
 		plot(zoo((dateshiftdiff$cases), dateshiftdiff$date), xaxt='n', yaxt='n', ylim=c(0,ylim_cases), type = c("p"), cex=0.5, lty=0, pch=16, ylab="", xlab="", col ="blue") 
@@ -345,12 +352,26 @@ makeRes<-function(predCFR=NULL, source, forday=7) {
 		stdevcfr<-predCFR$stdevcfr
 
 		paste0(country, ": ", tot_deaths, " deaths", ". Date: ", last_day,". The estimated lag between positives and deaths is: ", delay_time, ".<br>\n",
-		"Dataset: ", source, ". The estimated CFR is: ", round(CFR*100, 2), " +/- ", 3*round(stdevcfr*100, 2), ".</br>\n",
+		"Dataset: ", source, ". The estimated CFR is: ", round(CFR*100, 2), " +/- ", 1*round(stdevcfr*100, 2), ".</br>\n",
 		"Fatalities forecasted for the next ", forday, " days: ", forecast, " ( ", for_min, " / ", for_max, " ).\nDeaths forecasted per day: ", perday, " ( ", perdaymin, " / ", perdaymax, " ).\n")
 	} else {
 		NULL
 	}
 }
+
+makeEU<-function(data_all) {
+	eu_contries<-c("Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czechia", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Ireland", "Italy", "Latvia", "Lithuania", "Luxembourg", "Malta", "Netherlands", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden")
+	single_data.raw<-data_all[grep(paste(eu_contries, collapse="|"), data_all$country), ]
+	single_data.raw$country<-NULL
+	single_data.agg<-single_data.raw %>%
+		group_by(date) %>% 
+		summarize_all(sum, na.rm = TRUE)
+	single_data.agg.df<-as.data.frame(single_data.agg)
+	single_data.agg.df$country<-"EU"
+	single_country_data<-single_data.agg.df[,c(4,1,2,3)]
+	return(single_country_data)
+}
+
 
 makeTable<-function(predCFR) {
 	delay_time<-predCFR$delay
@@ -367,8 +388,8 @@ makeTable<-function(predCFR) {
 	perdaymin<-predCFR$perdaymin 
 	perdaymax<-predCFR$perdaymax 
 	stdevcfr<-predCFR$stdevcfr
-	header = c("Country", "Day", "Deaths", "CFR", "3stdev", "Est lag", "Forecast", "Min forecast", "Max forecast")
-	res = c(country, last_day, tot_deaths, round(CFR*100, 2), 3*round(stdevcfr*100, 2), delay_time, forecast, for_min, for_max)
+	header = c("Country", "Day", "Deaths", "CFR", "stdev", "Est lag", "Forecast", "Min forecast", "Max forecast")
+	res = c(country, last_day, tot_deaths, round(CFR*100, 2), 1*round(stdevcfr*100, 2), delay_time, forecast, for_min, for_max)
 	return(list("header"=header, "res"=res))
 }
 
