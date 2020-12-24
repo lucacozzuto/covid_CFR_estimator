@@ -4,14 +4,14 @@ LABEL authors="Luca Cozzuto <lucacozzuto@gmail.com>, Toni Hermoso Pulido <toni.h
 
 RUN apt-get update; apt-get upgrade -y
 RUN apt-get install -y patchelf libudunits2-dev libgdal-dev gdal-bin libproj-dev proj-data proj-bin libgeos-dev
-COPY deps.R /tmp
+COPY shiny/deps.R /tmp
 
 RUN Rscript /tmp/deps.R
 
 RUN mkdir -p /srv/shiny-server/covid-cfr-estimator/
 
-COPY server.R /srv/shiny-server/covid-cfr-estimator/
-COPY ui.R /srv/shiny-server/covid-cfr-estimator/
+COPY shiny/server.R /srv/shiny-server/covid-cfr-estimator/
+COPY shiny/ui.R /srv/shiny-server/covid-cfr-estimator/
 COPY functions.R /srv/shiny-server/covid-cfr-estimator/
 
 RUN sudo chown -R shiny:shiny /srv/shiny-server
