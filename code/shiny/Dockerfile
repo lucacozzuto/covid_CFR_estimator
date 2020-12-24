@@ -12,6 +12,7 @@ RUN mkdir -p /srv/shiny-server/covid-cfr-estimator/
 
 COPY server.R /srv/shiny-server/covid-cfr-estimator/
 COPY ui.R /srv/shiny-server/covid-cfr-estimator/
+COPY functions.R /srv/shiny-server/covid-cfr-estimator/
 
 RUN sudo chown -R shiny:shiny /srv/shiny-server
 
