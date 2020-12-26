@@ -9,7 +9,7 @@ jh_data<-getDataFromJH(death_web, cases_web)
 # JHUSA
 jhus_data<-getDataFromJH(death_web_US, cases_web_US, TRUE)
 # ECDC
-ecdc_data<-(getDataFromECDC(ecdc_web))
+#ecdc_data<-(getDataFromECDC(ecdc_web))
 # PC
 ita_data<-(getDataFromITA(ita_web))
 
@@ -26,7 +26,7 @@ server <- function(input, output, session) {
   datasetInput <- reactive({
     req(input$source_data)
     switch(input$source_data,
-           "ECDC" = ecdc_data,
+           #"ECDC" = ecdc_data,
            "JH" = jh_data,
            "JHUSA" = jhus_data,
            "PC" = ita_data)
@@ -70,6 +70,15 @@ server <- function(input, output, session) {
 			plotCFR(getData())
 		}
     }, height=600, width=600)
+
+	output$plot4 <- renderPlot({
+		if (!is.null(getData())) {
+	  		single_country_data = getSingleCountryData(datasetInput(), input$country, input$source_data)
+			if (!is.null(single_country_data)) {
+				plotHistory(input$country, single_country_data, input$start_time, input$time_window, input$for_time, input$force_del, input$cfr_time)
+			} 		
+		}
+    }, height=500, width=800)
        		
   output$view <- renderText({
 	if (!is.null(getData())) {
