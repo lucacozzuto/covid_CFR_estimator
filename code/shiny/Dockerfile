@@ -8,13 +8,15 @@ COPY shiny/deps.R /tmp
 
 RUN Rscript /tmp/deps.R
 
-RUN mkdir -p /srv/shiny-server/covid-cfr-estimator/
+#RUN mkdir -p /srv/shiny-server/covid-cfr-estimator/
 
-COPY shiny/server.R /srv/shiny-server/covid-cfr-estimator/
-COPY shiny/ui.R /srv/shiny-server/covid-cfr-estimator/
-COPY functions.R /srv/shiny-server/covid-cfr-estimator/
+#COPY shiny/server.R /srv/shiny-server/covid-cfr-estimator/
+#COPY shiny/ui.R /srv/shiny-server/covid-cfr-estimator/
+#COPY functions.R /srv/shiny-server/covid-cfr-estimator/
 
 RUN sudo chown -R shiny:shiny /srv/shiny-server
+
+VOLUME /srv/shiny-server/covid-cfr-estimator/
 
 # Clean cache
 RUN apt-get clean
