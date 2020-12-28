@@ -9,6 +9,8 @@ library("zoo")
 library(reshape)
 library(gridExtra)
 #libray(apricom)
+library(cowplot)
+library(scales)
 
 			
 # get the data from John Hopkins
@@ -260,6 +262,58 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 	}
 	return(results)
 }
+
+plotHistory<-function(country=NULL, single_country_data=NULL, start_time=45, time_window=90, forecast=7, force_del=0, time_CFR=30) {
+	num<-0
+	for(i in seq(151, 0, -forecast)) {
+		predCFR<-calcCFR(single_country_data, start_time, time_window, i, forecast, force_del, time_CFR)
+		res<-makeTable(predCFR)
+		if (num==0) {
+			table <- matrix(res$res)
+		} else {
+			table<-cbind(table, res$res)
+		}
+		num<-num+1
+	}
+
+	df<-as.data.frame(t(table))
+	names(df)<-res$header
+	date<-as.Date(as.vector(df$"Day"), format('%d-%m-%y'))
+	date<-c(date, tail(date, n=1)+forecast)
+
+	minfor<-c("NA", as.numeric(gsub(",", "", as.vector(df$"Min forecast"))))
+	maxfor<-c("NA", as.numeric(gsub(",", "", as.vector(df$"Max forecast"))))
+	lag<-c(as.vector(df$"Est lag"), "NA")
+	deaths<-c(as.numeric(gsub(",", "", as.vector(df$"Deaths"))), "NA")
+
+	datafr<-data.frame("date" = date, "minfor" = as.numeric(minfor), "maxfor" = as.numeric(maxfor), "deaths" = as.numeric(deaths), "lag"= as.numeric(lag))
+
+	library("ggplot2")
+#	png_file<-paste0(country, "_", head(date, n=1), "_for_", forecast,  "_", start_time, "_", time_window, "_", forcedel, ".png")
+#	png(png_file, height=500, width=1000)
+
+	pl1 <- ggplot(datafr, aes(x=date)) + 
+	  geom_ribbon(
+		aes(ymin = minfor, ymax = maxfor), fill = "grey70") + 
+	  geom_line(aes(y = deaths))+
+	  geom_line(aes(y = minfor), color="red", linetype = "dashed")+
+	  geom_line(aes(y = maxfor), color="red", linetype = "dashed")+
+	  theme_classic() +
+	  scale_x_date(breaks='1 month', labels = date_format("%b")) +
+	  ggtitle(gsub("_", " ", country)) + xlab(NULL) +
+	  theme(plot.title = element_text(hjust = 0.5))
+
+	pl2<-ggplot(datafr, aes(date)) + xlab(NULL) +
+	  geom_line(aes(y = lag)) + theme_classic() + theme(axis.text.x = element_blank(),
+				axis.ticks.x = element_blank()) +
+	  geom_hline(yintercept=forecast, linetype=2) 
+
+	plot_grid(pl1,pl2, ncol = 1, labels = c('A', 'B'), label_size = 12, rel_heights = c(2,1), align="hv")
+}
+
+
+
+
 
 plotTrend<-function(predCFR=NULL, force_ylim=0) {
 	if (!is.null(predCFR)) {

@@ -5,6 +5,6 @@ account: lucacozzuto
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3286575
-bundleId: 3971690
+bundleId: 4010410
 url: https://lucacozzuto.shinyapps.io/shinytest/
-when: 1607620830.18986
+when: 1608422333.88521

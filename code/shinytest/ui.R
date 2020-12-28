@@ -41,8 +41,9 @@ ui <- fluidPage(
     p("Author: Luca Cozzuto"),
       tabsetPanel(
         tabPanel("Trend", htmlOutput("view"), plotOutput("plot") %>% withSpinner(color="#0dc5c1")),
-        tabPanel("Var", plotOutput("plot2")),
+        tabPanel("Corr", plotOutput("plot2")),
         tabPanel("CFR", plotOutput("plot3")),
+        tabPanel("History", plotOutput("plot4")),
         tabPanel("Info", HTML(desc))
       )
 
