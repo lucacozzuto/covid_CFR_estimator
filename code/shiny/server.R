@@ -8,8 +8,8 @@ source("functions.R")
 jh_data<-getDataFromJH(death_web, cases_web)
 # JHUSA
 jhus_data<-getDataFromJH(death_web_US, cases_web_US, TRUE)
-# ECDC
-#ecdc_data<-(getDataFromECDC(ecdc_web))
+# JRC
+jrc_data<-(getDataFromJRC(jrc_web))
 # PC
 ita_data<-(getDataFromITA(ita_web))
 
@@ -26,10 +26,19 @@ server <- function(input, output, session) {
   datasetInput <- reactive({
     req(input$source_data)
     switch(input$source_data,
-           #"ECDC" = ecdc_data,
+           "JRC" = jrc_data,
            "JH" = jh_data,
            "JHUSA" = jhus_data,
            "PC" = ita_data)
+  })
+  
+  defCountry <- reactive({
+    req(input$source_data)
+    switch(input$source_data,
+           "JRC" = "Italy",
+           "JH" = "Italy",
+           "JHUSA" = "California",
+           "PC" = "Campania")
   })
 
     observe({
@@ -38,7 +47,8 @@ server <- function(input, output, session) {
    output$ui <- renderUI({
 		source_data<-datasetInput()
   		countries <- unique(source_data$country)
-    	selectInput("country", h3("Choose country"), countries, selected="Italy") 
+        def_country<-defCountry()
+    	selectInput("country", h3("Choose country"), countries, selected=def_country) 
 	})
 
   plot = reactiveVal()
