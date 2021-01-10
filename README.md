@@ -14,11 +14,10 @@ This lag is then used to estimate the CFR for forecasting the number of future f
 
 You can select 3 different datasets offered by: 
 * The John Hopkins resource centre
-* The European Centre for Disease Prevention and Control (ECDC)
+* The European Centre for Disease Prevention and Control (hosted ad JRC)
 * The Italian Protezione Civile for the Italian regions.
 After selecting the dataset you can choose a country / region.
 
 The shiny app is currently at
 
-https://lucacozzuto.shinyapps.io/shiny/
-
+https://lucacozzuto.shinyapps.io/shinytest/
