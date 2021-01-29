@@ -20,7 +20,7 @@ ui <- fluidPage(
     sliderInput("start_time", h3("Interval to scan"),
                        min = 1, max = 60, value = 45),
     sliderInput("time_window", h3("Moving window"),
-                       min = 1, max = 120, value = 90),
+                       min = 1, max = 120, value = 60),
     numericInput("force_ylim", 
                         h3("Max Y value"), 
                         value = 0),
