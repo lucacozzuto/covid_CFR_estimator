@@ -306,7 +306,7 @@ plotHistory<-function(country=NULL, single_country_data=NULL, start_time=45, tim
 	pl2<-ggplot(datafr, aes(date)) + xlab(NULL) +
 	  geom_line(aes(y = lag)) + theme_classic() + theme(axis.text.x = element_blank(),
 				axis.ticks.x = element_blank()) +
-	  geom_hline(yintercept=forecast, linetype=2) 
+	  geom_hline(yintercept=7, linetype=2) 
 
 	plot_grid(pl1,pl2, ncol = 1, labels = c('A', 'B'), label_size = 12, rel_heights = c(2,1), align="hv")
 }
