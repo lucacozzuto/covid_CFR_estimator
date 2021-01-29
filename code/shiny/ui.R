@@ -24,7 +24,7 @@ ui <- fluidPage(
     numericInput("force_ylim", 
                         h3("Max Y value"), 
                         value = 0),
-    sliderInput("force_del", h3("Manual delay"),
+    sliderInput("force_del", h3("Force lag"),
                        min = 0, max = 60, value = 0),
 
     sliderInput("go_back", h3("Go back in time"),
