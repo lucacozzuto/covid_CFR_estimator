@@ -18,7 +18,7 @@ death_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/c
 cases_web <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
 death_web_US <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
 cases_web_US <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
-ecdc_web <- "https://opendata.ecdc.europa.eu/covid19/casedistribution/csv"
+jrc_web <- "https://raw.githubusercontent.com/ec-jrc/COVID-19/master/data-by-country/jrc-covid-19-all-days-by-country.csv"
 ita_web<-"https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv"
 
 getDataFromITA <- function(link) {
@@ -30,12 +30,13 @@ getDataFromITA <- function(link) {
 	return (sel_data)
 }
 
-getDataFromECDC <- function(link) {
+getDataFromJRC <- function(link) {
 	data_raw<-read.csv(link,  na.strings = "", fileEncoding = "UTF-8-BOM")
 	data_raw$country<-data_raw$countriesAndTerritories
-	sel_data<-data_raw[, c("country", "dateRep", "cases", "deaths")]
+	sel_data<-data_raw[, c("CountryName", "Date", "CumulativePositive", "CumulativeDeceased")]
 	colnames(sel_data)<-c("country", "date", "cases", "deaths")
-	sel_data$date<-as.Date(sel_data$date, format="%d/%m/%Y")
+	sel_data$date<-as.Date(sel_data$date)
+	sel_data[is.na(sel_data$deaths), ]$deaths<-0
 	return (sel_data)
 }
 
@@ -92,17 +93,16 @@ getSingleCountryData <- function(data_all=NULL, country=NULL, source=NULL ) {
 		if (country %in% data_all$country) {
 			single_data<-data_all[grep(country, data_all$country), ]
 			merge_data<-single_data
-			if (source != "ECDC") {
-				death<-as.data.frame(diff(single_data$deaths))
-				row.names(death)<-tail(row.names(single_data), -1)
-				merge_data<-merge(tail(single_data, -1), death, by="row.names")
-				merge_data$Row.names<-NULL
-				merge_data$deaths<-NULL
-				names(merge_data)<-c("country", "date","cases", "deaths")
-				merge_data <- merge_data[order(merge_data$date),]
-				rownames(merge_data) <- 1:nrow(merge_data)
-			} 
-			if (grepl( "JH", source, fixed = TRUE)) {
+			death<-as.data.frame(diff(single_data$deaths))
+			row.names(death)<-tail(row.names(single_data), -1)
+			merge_data<-merge(tail(single_data, -1), death, by="row.names")
+			merge_data$Row.names<-NULL
+			merge_data$deaths<-NULL
+			names(merge_data)<-c("country", "date","cases", "deaths")
+			merge_data <- merge_data[order(merge_data$date),]
+			rownames(merge_data) <- 1:nrow(merge_data)
+
+			if (!grepl("PC", source, fixed = TRUE)) {
 				pos<-as.data.frame(diff(merge_data$cases))
 				row.names(pos)<-tail(row.names(merge_data), -1)
 				merge_data2 <- merge(tail(merge_data, -1), pos, by="row.names")
