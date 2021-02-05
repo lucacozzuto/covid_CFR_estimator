@@ -3,19 +3,19 @@ source("functions.R")
 library(cowplot)
 library(scales)
 
-#R --slave --args "United_States_of_America" 45 90 "ECDC" "7" "1" "151" "30" "0" < make_table.R 
+#R --slave --args "Italy" 45 90 "JRC" "7" "1" "151" "30" "0" < make_table.R 
 
 args<-commandArgs(TRUE)
 
-country <- "United_States_of_America"
+country <- "Italy"
 start_time <- 45
 time_window <- 90
-source <- "ECDC"
-forecast <- 1
+source <- "JH"
+forecast <- 7
 gobacka <- 1
 gobackb <- 73
 time_CFR <- 30
-forcedel<-7
+forcedel<-0
 #outfile <- "out.txt"
 
 country <- args[1]
@@ -29,8 +29,8 @@ time_CFR <- as.numeric(args[8])
 forcedel <- as.numeric(args[9])
 
 
-if (source == "ECDC") {
-	my_data<-getDataFromECDC(ecdc_web)
+if (source == "JRC") {
+	my_data<-getDataFromJRC(jrc_web)
 } else if (source == "JH") {
 	my_data<-getDataFromJH(death_web, cases_web)
 } else if (source == "JHUSA") {
@@ -40,6 +40,10 @@ if (source == "ECDC") {
 }
 
 single_country_data<-getSingleCountryData(my_data, country, source)
+a<-plotHistory(country, single_country_data, start_time, time_window, forecast, forcedel, time_CFR)
+png("ocazz.png", height=500, width=1000)
+print(a)
+dev.off()
 
 num<-0
 for(i in seq(gobackb, gobacka, -forecast)) {

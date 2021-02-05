@@ -275,7 +275,7 @@ plotHistory<-function(country=NULL, single_country_data=NULL, start_time=45, tim
 		}
 		num<-num+1
 	}
-
+	
 	df<-as.data.frame(t(table))
 	names(df)<-res$header
 	date<-as.Date(as.vector(df$"Day"), format('%d-%m-%y'))
@@ -284,9 +284,13 @@ plotHistory<-function(country=NULL, single_country_data=NULL, start_time=45, tim
 	minfor<-c("NA", as.numeric(gsub(",", "", as.vector(df$"Min forecast"))))
 	maxfor<-c("NA", as.numeric(gsub(",", "", as.vector(df$"Max forecast"))))
 	lag<-c(as.vector(df$"Est lag"), "NA")
+	CFR<-c(as.vector(df$"CFR"), "NA")
+	CFR_stdev<-c(as.vector(df$"stdev"), "NA")
 	deaths<-c(as.numeric(gsub(",", "", as.vector(df$"Deaths"))), "NA")
+ 	datafr<-data.frame("date" = date, "minfor" = as.numeric(minfor), "maxfor" = as.numeric(maxfor), "deaths" = as.numeric(deaths), "lag"= as.numeric(lag), "cfr"=as.numeric(CFR), "stdev"=as.numeric(CFR_stdev))
 
-	datafr<-data.frame("date" = date, "minfor" = as.numeric(minfor), "maxfor" = as.numeric(maxfor), "deaths" = as.numeric(deaths), "lag"= as.numeric(lag))
+	#datafr<-data.frame("date" = date, "minfor" = as.numeric(minfor), "maxfor" = as.numeric(maxfor), "deaths" = as.numeric(deaths), "lag"= as.numeric(lag))
+#print(datafr)
 
 	library("ggplot2")
 #	png_file<-paste0(country, "_", head(date, n=1), "_for_", forecast,  "_", start_time, "_", time_window, "_", forcedel, ".png")
@@ -308,7 +312,16 @@ plotHistory<-function(country=NULL, single_country_data=NULL, start_time=45, tim
 				axis.ticks.x = element_blank()) +
 	  geom_hline(yintercept=7, linetype=2) 
 
-	plot_grid(pl1,pl2, ncol = 1, labels = c('A', 'B'), label_size = 12, rel_heights = c(2,1), align="hv")
+	pl3<-ggplot(datafr, aes(date)) + xlab(NULL) +
+		geom_ribbon(
+		aes(ymin = cfr-stdev, ymax = cfr+stdev), fill = "grey70") + 
+  geom_line(aes(y = cfr))+
+  theme_classic() + theme(axis.text.x = element_blank(),
+				axis.ticks.x = element_blank()) +
+	  geom_hline(yintercept=2, linetype=2) 
+
+
+	plot_grid(pl1,pl2,pl3, ncol = 1, labels = c('A', 'B', 'C'), label_size = 12, rel_heights = c(2,1,1), align="hv")
 }
 
 
