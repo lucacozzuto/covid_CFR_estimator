@@ -223,6 +223,9 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 		minstd<-fc-(1*stdevcfr)
 		maxstd<-fc+(1*stdevcfr)
 
+		if (is.na(minstd) ) {
+			minstd<-0
+		}
 		if (minstd < 0) {
 			minstd<-0
 		}
@@ -265,7 +268,7 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 
 plotHistory<-function(country=NULL, single_country_data=NULL, start_time=45, time_window=90, forecast=7, force_del=0, time_CFR=30) {
 	num<-0
-	for(i in seq(151, 0, -forecast)) {
+	for(i in seq(251, 0, -forecast)) {
 		predCFR<-calcCFR(single_country_data, start_time, time_window, i, forecast, force_del, time_CFR)
 		res<-makeTable(predCFR)
 		if (num==0) {
