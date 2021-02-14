@@ -470,6 +470,8 @@ getDataFromJH<-function(death_web, cases_web, single=FALSE){
 	colnames(pos_jh)<-c("country", "date", "cases")
 	jh_data<-pos_jh
 	jh_data$deaths<-deat_jh$deaths
+	jh_data$country<-gsub("[()]","",as.character(jh_data$country))
 	return(jh_data)
+
 }
 
