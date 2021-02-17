@@ -12,6 +12,7 @@ time_window <- as.numeric(args[2])
 source <- args[3]
 forecast <- as.numeric(args[4])
 time_CFR <- as.numeric(args[5])
+goback <- as.numeric(args[6])
 
 if (source == "JRC") {
 	my_data<-getDataFromJRC(jrc_web)
@@ -41,13 +42,13 @@ resnames<-names(results)
 for(country in countries) {
 	single_country_data<-getSingleCountryData(my_data, country, source)
 	#print(country)
-	predCFR<-calcCFR(single_country_data, start_time, time_window, 0, forecast, 0, time_CFR)
+	predCFR<-calcCFR(single_country_data, start_time, time_window, goback, forecast, 0, time_CFR)
 	single_res<-(data.frame(tail(predCFR$dateshiftdiff, 1)["date"], country, predCFR$delay, round(predCFR$fc*100,2), sum(predCFR$dateshiftdiff["deaths"]), predCFR$forecast, predCFR$for_min, predCFR$for_max))
 	results <-rbind(results, single_res)
 }
 names(results)<-resnames
 
-outname<-paste(source, start_time, time_window, forecast, time_CFR, Sys.Date(), sep="_")
+outname<-paste(source, start_time, time_window, forecast, time_CFR, Sys.Date()-goback, sep="_")
 outfile<-paste0(outname, ".txt")
 
 write.table(results, file=outfile, row.names=FALSE, sep="\t")
