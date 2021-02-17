@@ -146,6 +146,22 @@ plotVAR<-function(predCFR) {
 }
 
 calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, for_time=7, force_del=0, cfr_time=30) {
+#Default
+		defcor<-NA
+		fitT7<-NA 
+		fitdT7<-NA
+		props<-NA
+		fc_t<-NA
+		fc<-NA
+		cvdevcfr_t<-NA
+		stdevcfr<-NA
+		forecast<-NA
+		for_min<-NA
+		for_max<-NA
+		perday<-NA
+		perdaymin<-NA
+		perdaymax<-NA
+
 	results<-NULL
 	if (!is.null(dateshiftdiff )) {
 		if (is.null(for_time)) {
@@ -181,9 +197,9 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 			#cvdevcfr_t[i]<-ccf(win_pos, win_deat, na.action=na.omit)
 			#cvdevcfr_t[i] <- cor.test(win_pos, win_deat)$estimate
 		    cor.testres<-cor.test(win_pos, win_deat)
-		    cor.val<-NA
+		    cor.val<-defcor
 		    if (!is.na(cor.testres$p.value)) {
-			    if (cor.testres$p.value<=0.05) {
+			    if (cor.testres$p.value<=0.05 && cor.testres$estimate > 0.5) {
 			    	cor.val<-cor.testres$estimate
 			    }
 			}
@@ -197,7 +213,7 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 # inverted win_pos and win_deat
 		#check no values
 		if (all(is.na(cvdevcfr_t))) {
-			delay_time<-start_time
+			delay_time<-NA
 		} else {	
 			delay_time<-which.max(cvdevcfr_t)
 			#delay_time<-which.min(cvdevcfr_t)
@@ -213,37 +229,39 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 			forecast_time<-as.numeric(for_time) 
 		}
 
-		props<-tail(fitdT7, -delay_time)/head(fitT7, -delay_time)*100
-		fc<-fc_t[delay_time]
-		stdevcfr<-stdevcfr_t[delay_time]
-		forecast<-sum(dateshiftdiff$deaths)
+		if (!is.na(delay_time)) {
+			props<-tail(fitdT7, -delay_time)/head(fitT7, -delay_time)*100
+			fc<-fc_t[delay_time]
+			stdevcfr<-stdevcfr_t[delay_time]
+			forecast<-sum(dateshiftdiff$deaths)
 
-		for_min <- forecast
-		for_max <- for_min
-		minstd<-fc-(1*stdevcfr)
-		maxstd<-fc+(1*stdevcfr)
-
-		if (is.na(minstd) ) {
-			minstd<-0
-		}
-		if (minstd < 0) {
-			minstd<-0
-		}
+			for_min <- forecast
+			for_max <- for_min
+			minstd<-fc-(1*stdevcfr)
+			maxstd<-fc+(1*stdevcfr)
+		
+			if (is.na(minstd) ) {
+				minstd<-0
+			}
+			if (minstd < 0) {
+				minstd<-0
+			}
 	
-		for(i in 1:forecast_time) {
-			forecast = forecast + fitT7[length(props)+i]*fc
-			for_min = for_min + fitT7[length(props)+i]*(minstd)
-			for_max = for_max + fitT7[length(props)+i]*(maxstd)
+				for(i in 1:forecast_time) {
+				forecast = forecast + fitT7[length(props)+i]*fc
+				for_min = for_min + fitT7[length(props)+i]*(minstd)
+				for_max = for_max + fitT7[length(props)+i]*(maxstd)
+			}
+			for_min = round(for_min)
+			for_max = round(for_max)
+		
+			diff_for<-round(forecast)-sum(dateshiftdiff$deaths)
+			forecast<-round(forecast, 0)
+
+			perday<-format(round((forecast-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
+			perdaymin<-format(round((for_min-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
+			perdaymax<-format(round((for_max-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
 		}
-		for_min = round(for_min)
-		for_max = round(for_max)
-
-		diff_for<-round(forecast)-sum(dateshiftdiff$deaths)
-		forecast<-round(forecast, 0)
-
-		perday<-format(round((forecast-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
-		perdaymin<-format(round((for_min-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
-		perdaymax<-format(round((for_max-sum(dateshiftdiff$deaths))/forecast_time, 0), big.mark=",")
 
 		results<-list("fitp7" = fitT7, 
 			"fitd7" = fitdT7,
