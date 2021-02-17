@@ -11,7 +11,7 @@ country <- "EU"
 start_time <- 45
 time_window <- 90
 force_ylim<-0
-source <- "ECDC"
+source <- "JRC"
 forecast <- 7
 go_back <- 0
 force_del <- 0
@@ -29,8 +29,8 @@ for_time <- as.numeric(args[8])
 cfr_time <-as.numeric(args[9])
 
 
-if (source_data == "ECDC") {
-	my_data<-getDataFromECDC(ecdc_web)
+if (source_data == "JRC") {
+	my_data<-getDataFromJRC(jrc_web)
 } else if (source_data == "JH") {
 	my_data<-getDataFromJH(death_web, cases_web)
 } else if (source_data == "JHUSA") {

@@ -9,7 +9,7 @@ desc<-"Estimating the case fatality rate (CFR) of an ongoing pandemics is a comp
 
 # Define UI ----
 ui <- fluidPage(
-  titlePanel("CFR estimator for Covid19"),
+  titlePanel("PanDyCE - CFR estimator for Covid19"),
 
  sidebarLayout( 
   sidebarPanel(
@@ -28,7 +28,7 @@ ui <- fluidPage(
                        min = 0, max = 60, value = 0),
 
     sliderInput("go_back", h3("Go back in time"),
-                       min = 0, max = 200, value = 0),
+                       min = 0, max = 300, value = 0),
 
     sliderInput("cfr_time", h3("Days for CFR estimation"),
                        min = 2, max = 60, value = 30),
