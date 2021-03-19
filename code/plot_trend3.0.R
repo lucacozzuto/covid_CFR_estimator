@@ -7,11 +7,11 @@ library(scales)
 
 args<-commandArgs(TRUE)
 
-country <- "EU"
+country <- "Italy7"
 start_time <- 45
 time_window <- 90
 force_ylim<-0
-source <- "JRC"
+source_data <- "test"
 forecast <- 7
 go_back <- 0
 force_del <- 0
@@ -37,6 +37,8 @@ if (source_data == "JRC") {
 	my_data<-getDataFromJH(death_web_US, cases_web_US, TRUE)
 } else if (source_data == "PC") {
 	my_data<-getDataFromITA(ita_web)	
+} else if (source_data == "test") {
+	my_data<-getTestData("test_set.txt")
 }
 
 if (country == "EU") {
@@ -47,9 +49,9 @@ if (country == "EU") {
 
 #head(my_data)
 predCFR<-calcCFR(single_country_data, start_time, time_window, go_back, for_time, force_del, cfr_time)
-bname<-paste("CFR_", country, "_", source, sep="")
+bname<-paste("CFR_", country, "_", source_data, sep="")
 
-makeRes(predCFR, source, for_time)
+makeRes(predCFR, source_data, for_time)
 
 png(paste0(bname, "_plot.png"), width=1200,  height=600)
 plotTrend(predCFR)

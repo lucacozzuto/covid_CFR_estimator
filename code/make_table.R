@@ -7,10 +7,10 @@ library(scales)
 
 args<-commandArgs(TRUE)
 
-country <- "Italy"
+country <- "Italy7"
 start_time <- 45
 time_window <- 90
-source <- "JH"
+source <- "test"
 forecast <- 7
 gobacka <- 1
 gobackb <- 73
@@ -37,11 +37,15 @@ if (source == "JRC") {
 	my_data<-getDataFromJH(death_web_US, cases_web_US, TRUE)
 } else if (source == "PC") {
 	my_data<-getDataFromITA(ita_web)	
+} else if (source == "test") {
+	my_data<-getTestData("test_set.txt")
 }
 
 single_country_data<-getSingleCountryData(my_data, country, source)
-a<-plotHistory(country, single_country_data, start_time, time_window, forecast, forcedel, time_CFR)
-png("ocazz.png", height=500, width=1000)
+a<-plotHistory(country, single_country_data, start_time, time_window, forecast, forcedel, time_CFR, gobackb)
+png_file1<-paste0(country, "_", head(date, n=1), "_for_", forecast,  "_", start_time, "_", time_window, "_", forcedel, "_hist", ".png")
+
+png(png_file1, height=500, width=1000)
 print(a)
 dev.off()
 

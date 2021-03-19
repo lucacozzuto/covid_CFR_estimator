@@ -21,6 +21,7 @@ cases_web_US <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/maste
 jrc_web <- "https://raw.githubusercontent.com/ec-jrc/COVID-19/master/data-by-country/jrc-covid-19-all-days-by-country.csv"
 ita_web<-"https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv"
 
+
 getDataFromITA <- function(link) {
 	data_raw<-read.csv(link)
 	data_raw$"country"<-data_raw$denominazione_regione
@@ -39,6 +40,16 @@ getDataFromJRC <- function(link) {
 	sel_data[is.na(sel_data$deaths), ]$deaths<-0
 	return (sel_data)
 }
+
+getTestData <- function(link) {
+	data_raw<-read.csv(link,  na.strings = "", fileEncoding = "UTF-8-BOM")
+	data_raw$country<-data_raw$countriesAndTerritories
+	sel_data<-data_raw[, c("CountryName", "Date", "CumulativePositive", "CumulativeDeceased")]
+	colnames(sel_data)<-c("country", "date", "cases", "deaths")
+	sel_data$date<-as.Date(sel_data$date, format="%d/%m/%Y")
+	return (sel_data)
+}
+
 
 getPartDataFromJH <- function(link, us=FALSE) {
 	data_raw<-read.csv(link)
@@ -284,9 +295,9 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 	return(results)
 }
 
-plotHistory<-function(country=NULL, single_country_data=NULL, start_time=45, time_window=90, forecast=7, force_del=0, time_CFR=30) {
+plotHistory<-function(country=NULL, single_country_data=NULL, start_time=45, time_window=90, forecast=7, force_del=0, time_CFR=30, gobackb=251) {
 	num<-0
-	for(i in seq(251, 0, -forecast)) {
+	for(i in seq(gobackb, 0, -forecast)) {
 		predCFR<-calcCFR(single_country_data, start_time, time_window, i, forecast, force_del, time_CFR)
 		res<-makeTable(predCFR)
 		if (num==0) {
