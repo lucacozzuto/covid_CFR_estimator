@@ -295,9 +295,9 @@ calcCFR<-function(dateshiftdiff=NULL, start_time=45, time_window=90, go_back=0, 
 	return(results)
 }
 
-plotHistory<-function(country=NULL, single_country_data=NULL, start_time=45, time_window=90, forecast=7, force_del=0, time_CFR=30, gobackb=251) {
+plotHistory<-function(country=NULL, single_country_data=NULL, start_time=45, time_window=90, forecast=7, force_del=0, time_CFR=30, gobackb=251, gobacka=0) {
 	num<-0
-	for(i in seq(gobackb, 0, -forecast)) {
+	for(i in seq(gobackb+gobacka, gobacka, -forecast)) {
 		predCFR<-calcCFR(single_country_data, start_time, time_window, i, forecast, force_del, time_CFR)
 		res<-makeTable(predCFR)
 		if (num==0) {
@@ -350,8 +350,9 @@ plotHistory<-function(country=NULL, single_country_data=NULL, start_time=45, tim
   geom_line(aes(y = cfr))+
   theme_classic() + theme(axis.text.x = element_blank(),
 				axis.ticks.x = element_blank()) +
-	  geom_hline(yintercept=2, linetype=2) 
-
+	   ylim(0,6) + 
+           geom_hline(yintercept=2, linetype=2) 
+	  
 
 	plot_grid(pl1,pl2,pl3, ncol = 1, labels = c('A', 'B', 'C'), label_size = 12, rel_heights = c(2,1,1), align="hv")
 }

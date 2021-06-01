@@ -75,17 +75,12 @@ server <- function(input, output, session) {
     	}
     }, height=600, width=600)
 
-	output$plot3 <- renderPlot({
-		if (!is.null(getData())) {
-			plotCFR(getData())
-		}
-    }, height=600, width=600)
 
 	output$plot4 <- renderPlot({
 		if (!is.null(getData())) {
 	  		single_country_data = getSingleCountryData(datasetInput(), input$country, input$source_data)
 			if (!is.null(single_country_data)) {
-				plotHistory(input$country, single_country_data, input$start_time, input$time_window, input$for_time, input$force_del, input$cfr_time)
+				plotHistory(input$country, single_country_data, input$start_time, input$time_window, input$for_time, input$force_del, input$cfr_time, 251, input$go_back)
 			} 		
 		}
     }, height=500, width=800)
