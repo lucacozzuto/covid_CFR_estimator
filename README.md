@@ -20,4 +20,4 @@ After selecting the dataset you can choose a country / region.
 
 The shiny app is currently at
 
-https://cfrestimator.crg.eu/
+https://pandyce.crg.eu/
